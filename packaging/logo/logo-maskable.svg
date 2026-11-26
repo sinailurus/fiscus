@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#1fa07e"/>
+  <defs>
+    <linearGradient id="chip" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f3d680"/>
+      <stop offset="1" stop-color="#c9a85c"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(512 512) scale(0.72) translate(-512 -512)">
+    <g transform="rotate(-7 512 512)"><rect x="300" y="244" width="440" height="316" rx="52" fill="#ffffff" opacity="0.30"/></g>
+    <g transform="rotate(-3 512 512)"><rect x="278" y="286" width="474" height="336" rx="55" fill="#ffffff" opacity="0.55"/></g>
+    <rect x="256" y="336" width="512" height="380" rx="58" fill="#ffffff"/>
+    <rect x="310" y="394" width="112" height="84" rx="16" fill="url(#chip)"/>
+    <path d="M470 566 l78 78 l206 -222" fill="none" stroke="#1fa07e" stroke-width="46"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
