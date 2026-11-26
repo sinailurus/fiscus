@@ -87,6 +87,43 @@ with sync_playwright() as p:
     check("标记已还按钮翻转", "撤销已还" in pg.inner_text("#detail-body"))
     pg.click("#btn-detail-close")
 
+    # 详情 → 编辑回填（回归：closeDetail 清空 detailId 曾导致编辑变空白新增）
+    pg.locator(".card-row").first.click()
+    pg.wait_for_selector("#card-detail:not(.hidden)", timeout=5000)
+    pg.click("#btn-detail-edit")
+    pg.wait_for_selector("#card-modal:not(.hidden)", timeout=5000)
+    check("编辑弹窗回填卡名", pg.input_value("#f-name") != "",
+          f"got={pg.input_value('#f-name')!r}")
+    check("编辑弹窗标题正确", "编辑" in pg.inner_text("#card-modal-title"))
+    pg.click("#btn-card-modal-close")
+    pg.wait_for_timeout(300)
+    pg.locator(".card-row").first.click()
+    pg.wait_for_selector("#card-detail:not(.hidden)", timeout=5000)
+    pg.click("#btn-detail-close")
+
+    # 上传卡面图（回归：card_state 曾漏 image_url 导致列表/卡包不显示）
+    from PIL import Image
+    Image.new("RGB", (640, 400), (79, 110, 247)).save("/tmp/e2e_cardface.png")
+    pg.click("#btn-add-card")
+    pg.fill("#f-name", "卡面图测试")
+    pg.fill("#f-repay", "15")
+    pg.set_input_files("#f-image", "/tmp/e2e_cardface.png")
+    pg.click("#btn-card-save")
+    pg.wait_for_timeout(900)
+    ov = pg.evaluate("fetch('/api/overview').then(r => r.json())")
+    target = next((c for c in ov["cards"] if c["name"] == "卡面图测试"), None)
+    check("列表数据含卡面图地址", bool(target and target.get("image_url")),
+          f"image_url={target and target.get('image_url')!r}")
+    pg.click('.tab-item[data-tab="cards"]')
+    pg.click('.seg-btn[data-view="wallet"]')
+    pg.wait_for_timeout(600)
+    check("卡包视图渲染卡面图",
+          pg.locator('.wallet-face[style*="background-image"]').count() >= 1)
+    # 清理这张测试卡（不影响后续用例计数）
+    if target:
+        ctx.request.delete(f"{BASE}/api/cards/{target['id']}")
+    pg.wait_for_timeout(400)
+
     # 待办页
     pg.locator('.tab-item[data-tab="todo"]').click()
     pg.wait_for_timeout(700)

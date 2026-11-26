@@ -591,7 +591,11 @@ function closeCardModal() {
 $("#btn-card-modal-close")?.addEventListener("click", closeCardModal);
 $("#modal-mask")?.addEventListener("click", closeCardModal);
 $("#btn-add-card")?.addEventListener("click", () => openCardModal());
-$("#btn-detail-edit")?.addEventListener("click", () => { closeDetail(); openCardModal(state.detailId); });
+$("#btn-detail-edit")?.addEventListener("click", () => {
+  const id = state.detailId;      /* closeDetail 会清空 detailId，先取值 */
+  closeDetail();
+  openCardModal(id);
+});
 $("#btn-card-delete")?.addEventListener("click", async () => {
   if (!state.editId || !confirm("删除后该卡的账单、年费、权益记录全部清除，确定？")) return;
   await api(`/api/cards/${state.editId}`, { method: "DELETE" });

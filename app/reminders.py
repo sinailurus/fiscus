@@ -46,6 +46,7 @@ def card_state(conn: sqlite3.Connection, row: sqlite3.Row, base: datetime.date |
     card["bill_amount"] = bill["amount"] if bill else None   # None=未录入金额
     card["bill_paid"] = bool(bill["paid"]) if bill else False
     card["bill_id"] = bill["id"] if bill else None
+    card["image_url"] = f"/api/cards/image/{row['card_image']}" if row["card_image"] else ""
 
     # ---- 年费 ----
     fee = conn.execute("SELECT * FROM fees WHERE card_id=?", (row["id"],)).fetchone()

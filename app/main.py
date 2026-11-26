@@ -21,7 +21,7 @@ from .db import MEDIA_DIR, db, get_setting, init_db, set_setting
 APP_VERSION = "1.0.0"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 
-CARD_IMAGE_RE = re.compile(r"^card_\d+_\d+\.(png|jpg|webp)$")
+CARD_IMAGE_RE = re.compile(r"^card_\d+\.(png|jpg|webp)$")
 BRAND_RE = re.compile(r"^(bg|icon|loginicon|loginbg)_\d+\.(png|jpg|webp)$")
 COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 PALETTE = ["#ef5350", "#ab63f6", "#5c9dff", "#26a69a", "#66bb6a",
@@ -359,8 +359,7 @@ def _card_payload(conn, card_id: int) -> dict:
     row = conn.execute("SELECT * FROM cards WHERE id=?", (card_id,)).fetchone()
     if not row:
         return {}
-    state = reminders.card_state(conn, row)
-    state["image_url"] = f"/api/cards/image/{row['card_image']}" if row["card_image"] else ""
+    state = reminders.card_state(conn, row)   # 含 image_url / 账单年费权益状态
     state["bills"] = [
         dict(b) for b in conn.execute(
             "SELECT id, period, amount, due_date, paid, updated_at FROM bills "
