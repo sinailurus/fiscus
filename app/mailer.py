@@ -175,7 +175,7 @@ def _row(entries: list[dict], cids: dict, images: dict, bank_map: dict | None = 
         '{badge}　{bank}</td></tr>'
     )
     card_tpl = (
-        '<tr><td style="padding:6px 0;font-size:13px;color:#333;">'
+        '<tr><td style="padding:6px 0 6px 36px;font-size:13px;color:#333;">'
         '{thumb} <span style="font-weight:600;">{card}</span></td>'
         '<td align="center" style="font-size:13px;color:#556;">{bill_day}</td>'
         '<td align="right" style="font-size:13px;color:{color};font-weight:600;white-space:nowrap;">{date}</td></tr>'
@@ -202,20 +202,37 @@ def _row(entries: list[dict], cids: dict, images: dict, bank_map: dict | None = 
 def build_html(app_name: str, entries: list[dict], lead: int,
                cids: dict | None = None, images: dict | None = None,
                bank_map: dict | None = None) -> str:
-    """汇总邮件（2026-11-26 二次定稿）：仿 SubDeck 到期提醒版式。
+    """汇总邮件（2026-11-26 双节点定稿）：仿 SubDeck 到期提醒版式。
 
-    副标题「未来 N 天内共有 M 张信用卡待还款」，表格式正文：
-    信用卡（卡图+名称，占宽栏） | 账单日 | 还款日（右两栏收窄）。
+    两段：本期账单已出（账单日当天）→ 还款日提醒（还款日前 N 天及当天）。
+    段内三栏表格：信用卡（卡图+名称，占宽栏） | 账单日 | 还款日。
     所有卡片统一按银行分组（组头银行 logo，未上传则留空）。
     bank_map 为设置页「银行显示名」映射（原名 → 显示简称）。
     年费与权益不在表格内，落款小字提示条数。
+    免责声明按信用卡风险等级强化（逾期影响征信）。
     """
     cids = cids if cids is not None else {}
     images = images if images is not None else {}
+    statement = [e for e in entries if e["kind"] == "statement"]
     repay = [e for e in entries if e["kind"] == "repay"]
-    extra = [e for e in entries if e["kind"] != "repay"]
+    extra = [e for e in entries if e["kind"] not in ("repay", "statement")]
 
-    body = _row(repay, cids, images, bank_map) if repay else '<p style="font-size:13px;color:#667;">暂无待还款信用卡。</p>'
+    sections = ""
+    if statement:
+        sections += (
+            '<p style="font-size:13px;color:#1A2029;font-weight:600;margin:0 0 2px;">'
+            f'本期账单已出（{len(statement)} 张）</p>'
+            + _row(statement, cids, images, bank_map)
+        )
+    if repay:
+        if statement:
+            sections += '<div style="height:20px;"></div>'
+        sections += (
+            '<p style="font-size:13px;color:#1A2029;font-weight:600;margin:0 0 2px;">'
+            f'还款日临近（{len(repay)} 张）</p>'
+            + _row(repay, cids, images, bank_map)
+        )
+
     extra_note = ""
     if extra:
         names = "、".join(f"{e['card']}（{KIND_LABEL[e['kind']]}，{e['date'][5:]}）" for e in extra[:5])
@@ -224,6 +241,9 @@ def build_html(app_name: str, entries: list[dict], lead: int,
             f'另有 {len(extra)} 项年费 / 权益提醒：{names}{"等" if len(extra) > 5 else ""}。</p>'
         )
 
+    if not entries:
+        sections = '<p style="font-size:13px;color:#667;">暂无待办。</p>'
+
     return (
         f'<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;'
         f'max-width:560px;margin:0 auto;padding:24px 16px;">'
@@ -231,10 +251,14 @@ def build_html(app_name: str, entries: list[dict], lead: int,
         f'<p style="font-size:13px;color:#667;margin:0 0 12px;">'
         f'未来 <span style="color:#1A2029;font-weight:600;">{lead} 天内</span>'
         f'共有 <span style="color:#1A2029;font-weight:600;">{len(repay)}</span> 张信用卡待还款：</p>'
-        f'{body}'
+        f'{sections}'
         f'{extra_note}'
         f'<p style="font-size:12px;color:#99A;margin-top:24px;">'
-        f'日期与金额以发卡行 App 显示为准，本邮件由 {app_name} 自动发送。</p></div>'
+        f'本邮件仅为参考提醒，不构成任何还款依据。账单金额、最后还款日、宽限期与最低还款额'
+        f'一律以发卡行账单及官方 App 为准；信用卡逾期将产生利息与违约金，并可能影响个人征信，'
+        f'请务必在银行官方渠道核实后按时足额还款。</p>'
+        f'<p style="font-size:12px;color:#99A;margin-top:8px;">'
+        f'本邮件由 {app_name} 自动发送。</p></div>'
     )
 
 
@@ -269,7 +293,11 @@ def _notify_loop() -> None:
                 cfg = _smtp_cfg(conn, app_name)
                 cfg["to"] = emails
                 repay_n = len([e for e in entries if e["kind"] == "repay"])
-                subject = f"{app_name} · 未来 {lead} 天有 {repay_n} 张信用卡待还款"
+                stmt_n = len([e for e in entries if e["kind"] == "statement"])
+                if repay_n:
+                    subject = f"{app_name} · 未来 {lead} 天有 {repay_n} 张信用卡待还款"
+                else:
+                    subject = f"{app_name} · 本期账单已出（{stmt_n} 张）"
                 cids: dict = {}
                 images: dict = {}
                 html = build_html(app_name, entries, lead, cids, images,

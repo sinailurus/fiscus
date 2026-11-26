@@ -41,6 +41,10 @@ add_card("招行青年卡", "招商银行", max(1, (today + datetime.timedelta(d
          combined=1, color="#26a69a")
 add_card("农行超然商务白金卡", "农业银行", max(1, (today + datetime.timedelta(days=3)).day),
          color="#5c9dff")
+# 账单日=今天的卡：触发「本期账单已出」段
+add_card("交行沃尔玛卡", "交通银行", max(1, (today + datetime.timedelta(days=12)).day),
+         color="#8d6e63")
+conn.execute("UPDATE cards SET bill_day=? WHERE name='交行沃尔玛卡'", (today.day,))
 
 media = os.path.join(os.environ["DATA_DIR"], "media", "cards")
 os.makedirs(media, exist_ok=True)

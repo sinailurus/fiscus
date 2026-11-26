@@ -69,14 +69,35 @@ check("还款条目齐全", len(repay_entries) == 3, f"got={len(repay_entries)}"
 check("过长卡名截断省略", "…" in html and long_name not in html)
 check("无图卡用首字色块", "bgcolor" in html and ">招<" in html)
 check("全部按银行分组", html.count('font-weight:600;color:#1A2029;') == 2
-      and html.count("padding:6px 0;font-size:13px") == 3,
-      f"组头={html.count('font-weight:600;color:#1A2029;')} 子行={html.count('padding:6px 0;font-size:13px')}")
+      and html.count("padding:6px 0 6px 36px") == 3,
+      f"组头={html.count('font-weight:600;color:#1A2029;')} 子行={html.count('padding:6px 0 6px 36px')}")
 check("银行显示名映射生效", "招行</td>" in html and "招商银行</td>" not in html)
 check("无 logo 组头留空", 'width="24"' not in html)
 check("三栏表头齐全", "信用卡" in html and "账单日" in html and "还款日" in html)
 check("副标题文案", "张信用卡待还款" in html and "未来" in html)
 check("还款日完整日期", iso(2) in html and iso(3) in html)
+check("卡行首行缩进", 'padding:6px 0 6px 36px' in html)
 check("无图时无 CID 引用", "cid:" not in html)
+
+# 双节点：账单日当天出账提醒
+today_dd = datetime.date.today().day
+add_card(conn, "中行卡", "中国银行", repay_day=max(1, (datetime.date.today() + datetime.timedelta(days=1)).day),
+         color="#8d6e63")
+conn.execute("UPDATE cards SET bill_day=? WHERE name='中行卡'", (today_dd,))
+entries3 = notify_entries(conn, 5)
+stmt = [e for e in entries3 if e["kind"] == "statement"]
+check("账单日当天出账提醒", len(stmt) == 1 and stmt[0]["card"] == "中行卡",
+      f"got={len(stmt)}")
+check("出账提醒含还款日", "最后还款日" in stmt[0]["detail"] if stmt else False)
+cids3, images3 = {}, {}
+html3 = build_html("Fiscus", entries3, 5, cids3, images3, bank_map={"招商银行": "招行"})
+check("邮件双段渲染", "本期账单已出" in html3 and "还款日临近" in html3)
+check("强化免责声明", "征信" in html3 and "不构成任何还款依据" in html3)
+
+# 卡级提前提醒天数：中行卡 lead_days=6 → days=1 命中；改 0 走全局
+conn.execute("UPDATE cards SET lead_days=6 WHERE name='中行卡'")
+entries4 = notify_entries(conn, 2)     # 全局收紧到 2 天，中行卡仍应靠卡级 6 天命中
+check("卡级提前天数生效", any(e["kind"] == "repay" and e["card"] == "中行卡" for e in entries4))
 
 # 自传图场景（伪造磁盘文件走 CID 注册）
 media = os.path.join(os.environ["DATA_DIR"], "media", "cards")

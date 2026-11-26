@@ -150,12 +150,29 @@ def snapshot(conn: sqlite3.Connection) -> dict:
 
 
 def notify_entries(conn: sqlite3.Connection, lead_days: int) -> list[dict]:
-    """邮件扫描：未来 lead_days 天内需要提醒的条目（已还的不提醒）。"""
+    """邮件扫描（双节点，2026-11-26 定稿）：
+
+    - statement：当天为账单日 → 出账提醒一次（出的是本期账单，注意下期还款日）；
+    - repay：最后还款日前 N 天及当天 → 还款提醒（已还的不催）。
+      N 取卡级 lead_days（0 = 跟随全局 lead_days）。
+    """
     base = today()
     out = []
     snap = snapshot(conn)
     for c in snap["cards"]:
-        if not c["bill_paid"] and c["next_due_days"] <= lead_days:
+        # 节点一：账单日当天，出账提醒
+        if c["bill_day"] and base.day == c["bill_day"]:
+            out.append({
+                "kind": "statement", "card": c["name"], "title": "账单日出账",
+                "date": base.isoformat(), "days": 0,
+                "detail": f"本期账单已出，最后还款日 {c['next_due']}",
+                "bank": c["bank"], "color": c["color"],
+                "image_url": c["image_url"], "bank_logo_url": c["bank_logo_url"],
+                "bill_day": c["bill_day"],
+            })
+        # 节点二：还款日前 N 天及当天（N = 卡级 lead_days 或全局）
+        lead = c["lead_days"] if c["lead_days"] else lead_days
+        if not c["bill_paid"] and c["next_due_days"] <= lead:
             amount = "未录入金额" if c["bill_amount"] is None else f"{c['bill_amount']:g} 元"
             out.append({
                 "kind": "repay", "card": c["name"], "title": "还款提醒",
