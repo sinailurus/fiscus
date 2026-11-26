@@ -251,21 +251,20 @@ a { color: var(--accent); text-decoration: none; }
   background: linear-gradient(135deg, #F3D680, #C9A85C); flex: none; margin-top: 4px;
 }
 .wallet-badge-row { display: flex; gap: 8px; align-items: center; }
-.wallet-card .badge, .detail-face .badge {
+/* 卡面图上的徽章统一加深：层叠卡/展开置顶卡/详情卡面三种容器全覆盖 */
+:is(.wallet-card, .wallet-open, .detail-face) .badge {
   background: rgba(255, 255, 255, .22); color: #fff; backdrop-filter: blur(4px);
 }
-.wallet-card .badge-warn, .detail-face .badge-warn {
+:is(.wallet-card, .wallet-open, .detail-face) .badge-warn {
   background: rgba(245, 131, 35, .85); color: #fff;
 }
-.wallet-card .badge-danger, .detail-face .badge-danger {
+:is(.wallet-card, .wallet-open, .detail-face) .badge-danger {
   background: rgba(216, 67, 21, .85); color: #fff;
 }
-.wallet-card .badge-ok, .detail-face .badge-ok {
+:is(.wallet-card, .wallet-open, .detail-face) .badge-ok {
   background: rgba(97, 171, 131, .8); color: #fff;
 }
-/* 卡面图上浅色徽章（蓝/灰档）加深为实底白字，保证任意卡面图上都清晰 */
-.wallet-card .badge-blue, .detail-face .badge-blue,
-.wallet-card .badge-deep, .detail-face .badge-deep {
+:is(.wallet-card, .wallet-open, .detail-face) :is(.badge-blue, .badge-deep) {
   background: rgba(36, 54, 96, .82); color: #fff; border-color: transparent;
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
