@@ -525,6 +525,28 @@ function benefitForm(c) {
 }
 
 /* ---------------------------------------------------------------- 待办页 */
+function todoItemHTML(c, urgent, extraBadge) {
+  return `
+    <div class="swipe-wrap">
+      <div class="todo-actions">
+        <button class="ta-btn ta-paid" data-id="${c.id}">${c.bill_paid ? "撤销" : "已还"}</button>
+        <button class="ta-btn ta-amount" data-id="${c.id}">金额</button>
+        <button class="ta-btn ta-edit" data-id="${c.id}">编辑</button>
+      </div>
+      <div class="todo-item ${c.bill_paid ? "done" : ""}" data-id="${c.id}">
+        <button class="todo-check" title="${c.bill_paid ? "撤销已还" : "标记已还"}">✓</button>
+        <div class="todo-main">
+          <div class="todo-name">${esc(c.name)}</div>
+          <div class="todo-sub">${esc(c.next_due)} · ${amountText(c)}</div>
+        </div>
+        ${extraBadge || dueBadge(c.next_due_days, c.bill_paid, urgent)}
+        <div class="todo-hover-actions">
+          <button class="th-btn th-amount" data-id="${c.id}" title="记金额">¥</button>
+          <button class="th-btn th-edit" data-id="${c.id}" title="编辑账单">✎</button>
+        </div>
+      </div>
+    </div>`;
+}
 function renderTodo() {
   const o = state.overview;
   if (!o) return;
@@ -568,15 +590,7 @@ function renderTodo() {
     <div class="todo-section">
       <div class="todo-title"><span>还款（7 天内）</span>
         <span class="todo-count">待完成 ${repay.filter((c) => !c.bill_paid).length} · 已完成 <b class="ok">${repayDone}</b></span></div>
-      ${repay.length ? repay.map((c) => `
-        <div class="todo-item ${c.bill_paid ? "done" : ""}" data-id="${c.id}">
-          <button class="todo-check" title="标记已还">✓</button>
-          <div class="todo-main">
-            <div class="todo-name">${esc(c.name)}</div>
-            <div class="todo-sub">${esc(c.next_due)} · ${amountText(c)}</div>
-          </div>
-          ${dueBadge(c.next_due_days, c.bill_paid, urgent)}
-        </div>`).join("") : `<div class="empty-tip">7 天内没有需要还款的卡。</div>`}
+      ${repay.length ? repay.map((c) => todoItemHTML(c, urgent)).join("") : `<div class="empty-tip">7 天内没有需要还款的卡。</div>`}
     </div>`);
 
   /* 本期已还：可撤销（勾选后本周期静默，撤销后恢复提醒） */
@@ -584,16 +598,8 @@ function renderTodo() {
   sections.push(`
     <div class="todo-section">
       <div class="todo-title"><span>本期已还</span>
-        <span class="todo-count">${doneCards.length} 张 · 点 ✓ 可撤销</span></div>
-      ${doneCards.length ? doneCards.map((c) => `
-        <div class="todo-item done" data-id="${c.id}">
-          <button class="todo-check" title="撤销已还">✓</button>
-          <div class="todo-main">
-            <div class="todo-name">${esc(c.name)}</div>
-            <div class="todo-sub">${esc(c.next_due)} · ${amountText(c)}</div>
-          </div>
-          <span class="badge badge-ok">已还</span>
-        </div>`).join("") : `<div class="empty-tip">本期暂无已还的卡。</div>`}
+        <span class="todo-count">${doneCards.length} 张 · 右滑可撤销</span></div>
+      ${doneCards.length ? doneCards.map((c) => todoItemHTML(c, urgent, '<span class="badge badge-ok">已还</span>')).join("") : `<div class="empty-tip">本期暂无已还的卡。</div>`}
     </div>`);
 
   const fees = o.cards.filter((c) => c.fee?.alert);
@@ -629,25 +635,100 @@ function renderTodo() {
 
   $("#todo-sections").innerHTML = sections.join("");
 
+  const togglePaid = async (id) => {
+    const c = o.cards.find((x) => x.id === id);
+    if (!c) return;
+    await api(`/api/cards/${id}/bill`, { method: "POST",
+      body: { period: c.next_period, paid: !c.bill_paid, due_date: c.next_due,
+              ...(c.bill_amount !== null ? { amount: c.bill_amount } : {}) } });
+    toast(c.bill_paid ? `${c.name} 已撤销，提醒恢复` : `${c.name} 已标记还清`);
+    await refreshOverview();
+  };
+  const openAmountEditor = async (id) => {
+    await openDetail(id);
+    $("#bill-input")?.focus();
+  };
   /* 勾选打卡 = 标记已还 / 撤销已还 */
   $$("#todo-sections .todo-check").forEach((el) =>
     el.addEventListener("click", async (ev) => {
       ev.stopPropagation();
-      const id = +el.closest(".todo-item").dataset.id;
-      const c = o.cards.find((x) => x.id === id);
-      if (!c) return;
-      await api(`/api/cards/${id}/bill`, { method: "POST",
-        body: { period: c.next_period, paid: !c.bill_paid, due_date: c.next_due,
-                ...(c.bill_amount !== null ? { amount: c.bill_amount } : {}) } });
-      toast(c.bill_paid ? `${c.name} 已撤销，提醒恢复` : `${c.name} 已标记还清`);
-      await refreshOverview();
+      await togglePaid(+el.closest(".todo-item").dataset.id);
     }));
-  /* 点条目开详情 */
+  /* 滑动操作层与桌面悬浮按钮（委托到区块容器，重渲染后自动生效） */
+  $("#todo-sections").addEventListener("click", async (e) => {
+    const btn = e.target.closest(".ta-paid, .th-amount, .ta-amount, .th-edit, .ta-edit");
+    if (!btn) return;
+    e.stopPropagation();
+    const id = +btn.dataset.id;
+    const wrap = btn.closest(".swipe-wrap");
+    wrap?.classList.remove("open");
+    if (btn.classList.contains("ta-paid")) await togglePaid(id);
+    else if (btn.classList.contains("ta-amount") || btn.classList.contains("th-amount")) await openAmountEditor(id);
+    else openDetail(id);
+  });
+  /* 点条目开详情（已展开滑层的条目先收起） */
   $$("#todo-sections .todo-item").forEach((el) =>
     el.addEventListener("click", (e) => {
-      if (e.target.closest(".todo-check")) return;
+      if (e.target.closest(".todo-check") || e.target.closest(".todo-hover-actions")) return;
+      if (el.closest(".swipe-wrap")?.classList.contains("open")) {
+        el.closest(".swipe-wrap").classList.remove("open");
+        return;
+      }
       openDetail(+el.dataset.id);
     }));
+  initTodoSwipe();
+}
+
+/* 待办条目右滑操作（SubDeck 左滑骨架改向）：方向锁防误滚、半程吸附、单条互斥、点空白收回 */
+const TODO_SWIPE_W = 200;
+function closeTodoSwipe(except) {
+  $$("#todo-sections .swipe-wrap.open").forEach((w) => {
+    if (w !== except) w.classList.remove("open");
+  });
+}
+function initTodoSwipe() {
+  let sx = 0, sy = 0, dx = 0, wrapEl = null, cardEl = null, horizontal = null, startOpen = false, active = false;
+  const sections = $("#todo-sections");
+  if (!sections || sections.dataset.swipeInit) return;
+  sections.dataset.swipeInit = "1";
+  sections.addEventListener("touchstart", (e) => {
+    const w = e.target.closest(".swipe-wrap");
+    if (!w) return;
+    wrapEl = w; cardEl = w.querySelector(".todo-item");
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    dx = 0; horizontal = null; active = true;
+    startOpen = w.classList.contains("open");
+    cardEl.style.transition = "none";
+  }, { passive: true });
+  sections.addEventListener("touchmove", (e) => {
+    if (!active || !wrapEl) return;
+    dx = e.touches[0].clientX - sx;
+    const dy = e.touches[0].clientY - sy;
+    if (horizontal === null) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;   // 起步阈值，等方向明确
+      horizontal = Math.abs(dx) > Math.abs(dy);
+      if (horizontal) { closeTodoSwipe(wrapEl); wrapEl.classList.add("dragging"); }
+    }
+    if (!horizontal) return;                              // 纵向手势交还浏览器滚动
+    if (e.cancelable) e.preventDefault();
+    const base = startOpen ? TODO_SWIPE_W : 0;
+    const x = Math.min(TODO_SWIPE_W, Math.max(0, base + dx));
+    cardEl.style.transform = `translateX(${x}px)`;
+  }, { passive: false });
+  sections.addEventListener("touchend", () => {
+    if (!active || !wrapEl) return;
+    active = false;
+    cardEl.style.transition = "";
+    wrapEl.classList.remove("dragging");
+    if (horizontal === null) return;                      // 纯点击，无位移
+    const base = startOpen ? TODO_SWIPE_W : 0;
+    wrapEl.classList.toggle("open", base + dx > TODO_SWIPE_W / 2);
+    cardEl.style.transform = "";
+    horizontal = null;
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".swipe-wrap")) closeTodoSwipe();
+  }, true);
 }
 
 /* ---------------------------------------------------------------- 卡片编辑弹窗 */

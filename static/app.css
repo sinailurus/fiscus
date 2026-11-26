@@ -302,6 +302,49 @@ a { color: var(--accent); text-decoration: none; }
   padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow);
 }
 .todo-item.done { opacity: .62; }
+
+/* ---- 待办条目右滑操作（手机）+ 桌面悬浮按钮 ---- */
+.swipe-wrap { position: relative; }
+.todo-item {
+  position: relative; z-index: 1;
+  transition: transform .25s ease; touch-action: pan-y;
+}
+.swipe-wrap.dragging .todo-item { transition: none; }
+.swipe-wrap.open .todo-item { transform: translateX(200px); box-shadow: 0 2px 8px rgba(0, 0, 0, .10); }
+.todo-actions {
+  position: absolute; top: 0; left: 6px; bottom: 0; display: flex;
+  opacity: 0; transition: opacity .15s ease;
+  border-radius: var(--radius); overflow: hidden;
+  backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  border: 1px solid rgba(255, 255, 255, .10);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
+}
+[data-theme="light"] .todo-actions { border-color: rgba(0, 0, 0, .08); box-shadow: 0 2px 10px rgba(0, 0, 0, .08); }
+.swipe-wrap.open .todo-actions { opacity: 1; }
+.ta-btn {
+  width: 62px; border: none; background: transparent; cursor: pointer;
+  color: #fff; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+}
+.ta-paid { background: rgba(97, 171, 131, .85); }
+.ta-amount { background: rgba(92, 157, 255, .85); }
+.ta-edit { background: rgba(171, 99, 246, .82); }
+.todo-hover-actions { display: none; }
+@media (min-width: 760px) {
+  .todo-actions { display: none; }        /* 桌面：悬浮按钮替代滑动手势 */
+  .todo-hover-actions {
+    display: flex; gap: 8px;
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    opacity: 0; transition: opacity .15s ease;
+  }
+  .swipe-wrap:hover .todo-hover-actions { opacity: 1; }
+  .todo-item { padding-right: 110px; }
+  .th-btn {
+    width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--panel-2, var(--panel)); color: var(--text); cursor: pointer; font-size: 14px;
+  }
+  .th-btn:hover { border-color: var(--accent); color: var(--accent); }
+}
 .todo-check {
   width: 26px; height: 26px; border-radius: 50%; flex: none;
   border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center;

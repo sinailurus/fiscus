@@ -130,6 +130,15 @@ with sync_playwright() as p:
     pg.wait_for_timeout(700)
     check("待办页渲染", pg.is_visible(".todo-section"))
     check("日期条渲染", pg.locator(".date-cell").count() >= 14)
+    # 滑动操作层：模拟展开后点「金额」→ 详情打开并聚焦金额输入
+    pg.evaluate("document.querySelector('#todo-sections .swipe-wrap').classList.add('open')")
+    pg.wait_for_timeout(200)
+    pg.locator(".ta-amount").first.click()
+    pg.wait_for_selector("#card-detail:not(.hidden)", timeout=5000)
+    check("待办滑动操作进账单编辑", pg.is_visible("#bill-input"))
+    focused = pg.evaluate("document.activeElement?.id")
+    check("金额输入自动聚焦", focused == "bill-input", f"focused={focused}")
+    pg.click("#btn-detail-close")
     pg.screenshot(path=SHOT + "04_mobile_todo.png")
 
     # 卡包视图点卡 → 展开态（置顶卡 + 基本信息块 + 编辑按钮），点编辑进编辑弹窗
