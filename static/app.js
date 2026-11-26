@@ -169,16 +169,19 @@ function renderCardList(cards, urgent) {
   $$(".card-row", box).forEach((el) =>
     el.addEventListener("click", () => openDetail(+el.dataset.id)));
 }
-function walletFaceHTML(c, urgent) {
-  return `
-    <div class="wallet-face" style="background-color:${esc(c.color)};${c.image_url ? `background-image:url('${esc(c.image_url)}')` : ""}">
-      <div class="wallet-top">
+function walletFaceHTML(c, urgent, plain = false) {
+  const head = plain
+    ? `<div class="wallet-top"><div></div><div class="wallet-badge-row">${dueBadge(c.next_due_days, c.bill_paid, urgent)}</div></div>`
+    : `<div class="wallet-top">
         <div>
           <div class="wallet-bank">${esc(bankDisplay(c.bank) || c.name)}</div>
           <div class="wallet-sub">${esc(c.name)}${c.notes ? ` · ${esc(c.notes)}` : ""}</div>
         </div>
         <div class="wallet-badge-row">${dueBadge(c.next_due_days, c.bill_paid, urgent)}</div>
-      </div>
+      </div>`;
+  return `
+    <div class="wallet-face" style="background-color:${esc(c.color)};${c.image_url ? `background-image:url('${esc(c.image_url)}')` : ""}">
+      ${head}
       <div class="wallet-top">
         <div>
           <div class="wallet-due">${c.bill_paid ? "已还清" : amountText(c)}</div>
@@ -198,7 +201,7 @@ function renderCardWallet(cards, urgent) {
     const rest = cards.filter((c) => c.id !== openCard.id);
     box.innerHTML = `
       <div class="wallet-open">
-        ${walletFaceHTML(openCard, urgent)}
+        ${walletFaceHTML(openCard, urgent, true)}
         <div class="wallet-info-panel">
           <div class="wip-grid">
             <div class="wip-item"><span class="wip-k">卡名</span><span class="wip-v">${esc(openCard.name)}</span></div>
@@ -663,6 +666,7 @@ function openCardModal(id = null) {
   $("#f-limit").value = c?.limit_amount || "";
   $("#f-notes").value = c?.notes || "";
   $("#f-color").value = c?.color || PALETTE[2];
+  $("#f-color-hex").value = $("#f-color").value.toUpperCase();
   renderPalette($("#f-palette"), $("#f-color").value);
   const pv = $("#f-image-preview");
   pv.innerHTML = c?.image_url ? `<img src="${esc(c.image_url)}">` : "";
@@ -771,7 +775,25 @@ function renderPalette(box, active) {
     renderPalette(box, el.dataset.c);
   }));
 }
+/* 色号输入框与取色器/预设块双向同步（SubDeck 同款交互） */
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+function bindHexSync(hexEl, pickerEl, paletteBox) {
+  if (!hexEl || !pickerEl) return;
+  hexEl.addEventListener("input", () => {
+    const v = hexEl.value.trim();
+    if (!HEX_RE.test(v)) return;
+    pickerEl.value = v;
+    renderPalette(paletteBox, v.toUpperCase());
+  });
+  hexEl.addEventListener("change", () => {
+    const v = hexEl.value.trim();
+    hexEl.value = HEX_RE.test(v) ? v.toUpperCase() : pickerEl.value.toUpperCase();
+  });
+  pickerEl.addEventListener("input", () => { hexEl.value = pickerEl.value.toUpperCase(); });
+}
 $("#f-color")?.addEventListener("input", () => renderPalette($("#f-palette"), $("#f-color").value));
+bindHexSync($("#f-color-hex"), $("#f-color"), $("#f-palette"));
+bindHexSync($("#set-color-hex"), $("#set-color"), $("#set-palette"));
 
 /* ---------------------------------------------------------------- 银行显示名 */
 function bankNameMap() {
@@ -831,6 +853,7 @@ function fillSettings() {
   const s = state.settings || {};
   $("#set-app-name").value = s.app_name || "";
   $("#set-color").value = s.theme_color || "#4F6EF7";
+  $("#set-color-hex").value = $("#set-color").value.toUpperCase();
   renderPalette($("#set-palette"), s.theme_color || "#4F6EF7");
   $("#icon-preview").innerHTML = s.brand_icon ? `<img src="/api/brand/icon?v=${Date.now() % 1e7}">` : "F";
   $("#set-bg-select").value = s.bg_image?.startsWith("preset:") ? s.bg_image : (s.bg_image ? "upload:" : "");
