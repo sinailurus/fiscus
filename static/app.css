@@ -120,12 +120,9 @@ a { color: var(--accent); text-decoration: none; }
 .file-name { font-size: 12px; color: var(--text-3, #98a2b3); max-width: 140px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ---- 设置页桌面适配（照抄 SubDeck）：平板竖屏/电脑UA 面板收窄居中；≥1024 左 sticky 导航 + 右内容 ---- */
+/* ---- 设置页桌面适配（照抄 SubDeck）：≥820 左 sticky 导航 + 右内容 ---- */
 .settings-nav { display: none; }
-@media (min-width: 768px) and (max-width: 1023px) {
-  #tab-settings .settings-group { max-width: 760px; margin-inline: auto; }
-}
-@media (min-width: 1024px) {
+@media (min-width: 820px) {
   #tab-settings {
     display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 26px;
     align-items: start; max-width: 1160px; margin-inline: auto;
@@ -196,15 +193,7 @@ a { color: var(--accent); text-decoration: none; }
 }
 
 /* ---- 界面风格三档（对齐 SubDeck）：实色 / 点缀玻璃 / 重度玻璃 ---- */
-body::before {
-  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(640px 420px at 10% 6%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
-    radial-gradient(720px 500px at 92% 96%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
-  opacity: .72; transition: opacity .25s ease;
-}
-body[data-skin="solid"]::before { opacity: 0; }
-body[data-skin="glassplus"]::before { opacity: 1; }
+/* 全局光晕已移除：宽视口下 radial 色晕会在顶栏下方形成断层亮带（SubDeck 无全局光晕） */
 /* C 重度玻璃（实验）：大面板半透明毛玻璃，透出色晕/背景图 */
 body[data-skin="glassplus"] {
   --panel: color-mix(in srgb, var(--card) 74%, transparent);
@@ -224,7 +213,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 }
 [data-theme="dark"] .app-bg::after { background: rgba(20, 22, 28, var(--app-mask, .45)); }
 .app-main {
-  position: relative; z-index: 1; max-width: 860px; margin: 0 auto;
+  position: relative; z-index: 1; max-width: 1060px; margin: 0 auto;
   padding: 14px 16px calc(var(--tabbar-h) + 24px);
 }
 .topbar {
@@ -240,7 +229,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
-/* 顶栏横排导航（照抄 SubDeck topnav）：手机隐藏，桌面 ≥1092 显示 */
+/* 顶栏横排导航（照抄 SubDeck topnav）：手机隐藏，桌面 ≥820 显示 */
 .topnav { display: none; align-items: center; gap: 4px; margin-left: auto; }
 .topnav .nav-btn { flex: none; flex-direction: row; gap: 6px; padding: 7px 14px; border-radius: 10px; font-size: 13.5px; color: var(--text-2); }
 .topnav .nav-btn.active { color: var(--accent); background: var(--accent-weak); font-weight: 600; }
@@ -260,7 +249,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .ta-r { text-align: right; }
 .check-row { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; cursor: pointer; }
 .check-row input { width: 16px; height: 16px; accent-color: var(--accent); }
-@media (min-width: 1092px) {
+@media (min-width: 820px) {
   .table-wrap { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
   .card-list { display: none !important; }
 }
@@ -321,7 +310,10 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .badge-ok { background: rgba(97, 171, 131, .14); color: var(--ok); }
 
 /* ============ 卡包视图（完整卡面层叠，最临期完整置顶） ============ */
-.card-wallet { display: flex; flex-direction: column; }
+.card-wallet {
+  display: flex; flex-direction: column;
+  max-width: 520px; margin-inline: auto; width: 100%;  /* 宽视口限宽居中，防层叠卡面拉伸 */
+}
 /* 小米钱包式无缝层叠：容器无底色无边框，卡面图铺满到圆角边缘 */
 .wallet-card {
   position: relative;   /* 后卡按 DOM 顺序盖住前卡下部（钱包堆叠） */
@@ -672,8 +664,8 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   border-radius: 999px; background: var(--danger); color: #fff;
   font-size: 10px; display: flex; align-items: center; justify-content: center; padding: 0 4px;
 }
-/* 桌面 ≥1092：底部栏隐藏，顶栏横排导航接管（照抄 SubDeck topnav 断点逻辑） */
-@media (min-width: 1092px) {
+/* 桌面 ≥820：底部栏隐藏，顶栏横排导航接管（断点对齐 SubDeck 820） */
+@media (min-width: 820px) {
   .tabbar { display: none; }
   .topnav { display: flex; }
   .app-main { padding-left: 16px; padding-bottom: 32px; }
