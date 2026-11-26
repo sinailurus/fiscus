@@ -160,7 +160,7 @@ function renderCardList(cards, urgent) {
         ${c.image_url ? `<img src="${esc(c.image_url)}" alt="">` : esc(c.name.charAt(0))}
       </div>
       <div class="card-row-main">
-        <div class="card-row-name">${esc(c.name)}${c.bank ? ` · ${esc(c.bank)}` : ""}</div>
+        <div class="card-row-name">${esc(c.name)}${c.bank ? ` · ${esc(bankDisplay(c.bank))}` : ""}</div>
         <div class="card-row-sub">每月 ${c.repay_day} 号 · ${amountText(c)}</div>
       </div>
       ${dueBadge(c.next_due_days, c.bill_paid, urgent)}
@@ -176,7 +176,7 @@ function renderCardWallet(cards, urgent) {
       <div class="wallet-face" style="background-color:${esc(c.color)};${c.image_url ? `background-image:url('${esc(c.image_url)}')` : ""}">
         <div class="wallet-top">
           <div>
-            <div class="wallet-bank">${esc(c.bank || c.name)}</div>
+            <div class="wallet-bank">${esc(bankDisplay(c.bank) || c.name)}</div>
             <div class="wallet-sub">${esc(c.name)}${c.notes ? ` · ${esc(c.notes)}` : ""}</div>
           </div>
           <div class="wallet-badge-row">${dueBadge(c.next_due_days, c.bill_paid, urgent)}</div>
@@ -688,6 +688,59 @@ function renderPalette(box, active) {
 }
 $("#f-color")?.addEventListener("input", () => renderPalette($("#f-palette"), $("#f-color").value));
 
+/* ---------------------------------------------------------------- 银行显示名 */
+function bankNameMap() {
+  try { return JSON.parse(state.settings?.bank_names || "{}") || {}; }
+  catch { return {}; }
+}
+function bankDisplay(bank) {
+  if (!bank) return bank;
+  return bankNameMap()[bank.trim()] || bank;
+}
+
+function renderBankNameRows(map) {
+  const box = $("#bank-name-rows");
+  if (!box) return;
+  const entries = Object.entries(map || {});
+  box.innerHTML = entries.map(([from, to]) => `
+    <div class="bank-name-row">
+      <input class="input bn-from" placeholder="完整银行名" maxlength="30" value="${esc(from)}">
+      <span class="bn-arrow">→</span>
+      <input class="input bn-to" placeholder="显示名" maxlength="30" value="${esc(to)}">
+      <button class="icon-btn bn-del" title="删除">×</button>
+    </div>`).join("");
+  $$(".bank-name-row .bn-del", box).forEach((el) =>
+    el.addEventListener("click", () => el.closest(".bank-name-row").remove()));
+}
+function collectBankNameRows() {
+  const map = {};
+  $$("#bank-name-rows .bank-name-row").forEach((row) => {
+    const from = $(".bn-from", row).value.trim();
+    const to = $(".bn-to", row).value.trim();
+    if (from) map[from] = to;
+  });
+  return map;
+}
+$("#btn-bank-name-add")?.addEventListener("click", () => {
+  const box = $("#bank-name-rows");
+  const div = document.createElement("div");
+  div.className = "bank-name-row";
+  div.innerHTML = `
+    <input class="input bn-from" placeholder="完整银行名" maxlength="30">
+    <span class="bn-arrow">→</span>
+    <input class="input bn-to" placeholder="显示名" maxlength="30">
+    <button class="icon-btn bn-del" title="删除">×</button>`;
+  box.appendChild(div);
+  $(".bn-del", div).addEventListener("click", () => div.remove());
+});
+$("#btn-bank-name-save")?.addEventListener("click", async () => {
+  try {
+    await api("/api/settings", { method: "PUT", body: { bank_names: collectBankNameRows() } });
+    await loadSettings();
+    toast("银行显示名已保存");
+  } catch (ex) { toast(ex.message); }
+});
+
 /* ---------------------------------------------------------------- 设置页 */
 function fillSettings() {
   const s = state.settings || {};
@@ -697,6 +750,7 @@ function fillSettings() {
   $("#icon-preview").innerHTML = s.brand_icon ? `<img src="/api/brand/icon?v=${Date.now() % 1e7}">` : "F";
   $("#set-bg-select").value = s.bg_image?.startsWith("preset:") ? s.bg_image : (s.bg_image ? "upload:" : "");
   $("#set-bg-mask").value = s.bg_mask ?? 35;
+  renderBankNameRows(bankNameMap());
   $("#set-notify-on").setAttribute("aria-pressed", s.notify_enabled ? "true" : "false");
   $("#set-notify-emails").value = s.notify_emails || "";
   $("#set-lead").value = s.notify_lead_days ?? 3;

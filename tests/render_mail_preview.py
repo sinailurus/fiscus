@@ -59,7 +59,7 @@ conn.execute("UPDATE cards SET bank_logo='banklogo_1.png' WHERE name LIKE '招�
 
 entries = notify_entries(conn, 5)
 cids, images = {}, {}
-html = build_html("Fiscus", entries, 5, cids, images)
+html = build_html("Fiscus", entries, 5, cids, images, bank_map={"招商银行": "招行"})
 
 # 内嵌图改为 data URI 供浏览器预览
 html_view = html

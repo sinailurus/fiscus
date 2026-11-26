@@ -62,7 +62,7 @@ add_card(conn, "农行商务卡", "农业银行", repay_day=max(1, (datetime.dat
 
 entries = notify_entries(conn, 5)
 cids, images = {}, {}
-html = build_html("Fiscus", entries, 5, cids, images)
+html = build_html("Fiscus", entries, 5, cids, images, bank_map={"招商银行": "招行"})
 
 repay_entries = [e for e in entries if e["kind"] == "repay"]
 check("还款条目齐全", len(repay_entries) == 3, f"got={len(repay_entries)}")
@@ -71,6 +71,8 @@ check("无图卡用首字色块", "bgcolor" in html and ">招<" in html)
 check("全部按银行分组", html.count('font-weight:600;color:#1A2029;') == 2
       and html.count("padding:6px 0;font-size:13px") == 3,
       f"组头={html.count('font-weight:600;color:#1A2029;')} 子行={html.count('padding:6px 0;font-size:13px')}")
+check("银行显示名映射生效", "招行</td>" in html and "招商银行</td>" not in html)
+check("无 logo 组头留空", 'width="24"' not in html)
 check("三栏表头齐全", "信用卡" in html and "账单日" in html and "还款日" in html)
 check("副标题文案", "张信用卡待还款" in html and "未来" in html)
 check("还款日完整日期", iso(2) in html and iso(3) in html)
@@ -89,6 +91,7 @@ cids2, images2 = {}, {}
 html2 = build_html("Fiscus", entries2, 5, cids2, images2)
 check("卡面图走 CID 内嵌", 'src="cid:' in html2 and len(images2) >= 1)
 check("银行 logo 走 CID 内嵌", len(images2) >= 2, f"附件数={len(images2)}")
+check("自传 logo 后组头显示", html2.count('width="24"') == 1, f"组头 logo img={html2.count(chr(34)+'width='+chr(34)+'24'+chr(34))}")
 
 fails = [r for r in results if not r[1]]
 print(f"\n{len(results) - len(fails)}/{len(results)} 通过")

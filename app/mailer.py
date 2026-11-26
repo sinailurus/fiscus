@@ -89,6 +89,19 @@ def _pic_cid(url: str, cids: dict, images: dict) -> str:
 
 # ---------------------------------------------------------------- SMTP 配置
 
+def _bank_map(conn) -> dict:
+    """设置页「银行显示名」映射（原名 → 简称），邮件组头用简称显示。"""
+    import json as _json
+    raw = get_setting(conn, "bank_names", "")
+    if not raw:
+        return {}
+    try:
+        parsed = _json.loads(raw)
+        return parsed if isinstance(parsed, dict) else {}
+    except ValueError:
+        return {}
+
+
 def _smtp_cfg(conn, app_name: str):
     port = int(get_setting(conn, "smtp_port", "465") or 465)
     use_ssl = get_setting(conn, "smtp_ssl", "1") == "1"
@@ -149,8 +162,9 @@ def _color(days: int) -> str:
     return "#D84315" if days <= 3 else "#1A2029"
 
 
-def _row(entries: list[dict], cids: dict, images: dict) -> str:
+def _row(entries: list[dict], cids: dict, images: dict, bank_map: dict | None = None) -> str:
     """按银行分组渲染（统一信报合一版式）：组头 logo + 子行（卡图 卡名 账单日 还款日）。"""
+    bank_map = bank_map or {}
     html = []
     banks: dict[str, list[dict]] = {}
     for e in entries:
@@ -168,7 +182,8 @@ def _row(entries: list[dict], cids: dict, images: dict) -> str:
     )
     rows = []
     for bank, items in banks.items():
-        rows.append(head_tpl.format(bank=bank, badge=_bank_badge(bank, items[0], cids, images)))
+        rows.append(head_tpl.format(bank=bank_map.get(bank, bank),
+                                    badge=_bank_badge(bank, items[0], cids, images)))
         for e in items:
             bill_day = f"每月 {e['bill_day']} 号" if e.get("bill_day") else "—"
             rows.append(card_tpl.format(
@@ -185,12 +200,14 @@ def _row(entries: list[dict], cids: dict, images: dict) -> str:
 
 
 def build_html(app_name: str, entries: list[dict], lead: int,
-               cids: dict | None = None, images: dict | None = None) -> str:
+               cids: dict | None = None, images: dict | None = None,
+               bank_map: dict | None = None) -> str:
     """汇总邮件（2026-11-26 二次定稿）：仿 SubDeck 到期提醒版式。
 
     副标题「未来 N 天内共有 M 张信用卡待还款」，表格式正文：
     信用卡（卡图+名称，占宽栏） | 账单日 | 还款日（右两栏收窄）。
-    所有卡片统一按银行分组（组头银行 logo / 首字色块）。
+    所有卡片统一按银行分组（组头银行 logo，未上传则留空）。
+    bank_map 为设置页「银行显示名」映射（原名 → 显示简称）。
     年费与权益不在表格内，落款小字提示条数。
     """
     cids = cids if cids is not None else {}
@@ -198,7 +215,7 @@ def build_html(app_name: str, entries: list[dict], lead: int,
     repay = [e for e in entries if e["kind"] == "repay"]
     extra = [e for e in entries if e["kind"] != "repay"]
 
-    body = _row(repay, cids, images) if repay else '<p style="font-size:13px;color:#667;">暂无待还款信用卡。</p>'
+    body = _row(repay, cids, images, bank_map) if repay else '<p style="font-size:13px;color:#667;">暂无待还款信用卡。</p>'
     extra_note = ""
     if extra:
         names = "、".join(f"{e['card']}（{KIND_LABEL[e['kind']]}，{e['date'][5:]}）" for e in extra[:5])
@@ -255,7 +272,8 @@ def _notify_loop() -> None:
                 subject = f"{app_name} · 未来 {lead} 天有 {repay_n} 张信用卡待还款"
                 cids: dict = {}
                 images: dict = {}
-                html = build_html(app_name, entries, lead, cids, images)
+                html = build_html(app_name, entries, lead, cids, images,
+                                  bank_map=_bank_map(conn))
                 send_mail(cfg, subject, html, images)
         except Exception:
             traceback.print_exc()   # 后台任务：打印日志继续轮询
@@ -278,7 +296,7 @@ def send_test(conn, app_name: str) -> tuple[bool, str]:
     subject = f"{app_name} · 测试邮件"
     cids: dict = {}
     images: dict = {}
-    html = build_html(app_name, entries, lead, cids, images) if entries else (
+    html = build_html(app_name, entries, lead, cids, images, bank_map=_bank_map(conn)) if entries else (
         f'<div style="font-family:sans-serif;padding:16px;font-size:14px;">'
         f'{app_name} 邮箱提醒配置成功。当前没有待提醒事项。</div>'
     )

@@ -153,6 +153,7 @@ def _settings_payload(conn) -> dict:
         "urgent_days": int(get_setting(conn, "notify_urgent_days", "3") or 3),
         "notify_enabled": get_setting(conn, "notify_enabled", "0") == "1",
         "notify_emails": get_setting(conn, "notify_emails", ""),
+        "bank_names": get_setting(conn, "bank_names", ""),
         "notify_lead_days": int(get_setting(conn, "notify_lead_days", "3") or 3),
         "notify_hour": int(get_setting(conn, "notify_hour", "8") or 8),
         "smtp_host": get_setting(conn, "smtp_host", ""),
@@ -232,6 +233,26 @@ def put_settings(request: Request, body: dict):
             if len(emails) > 400 or (emails and any(("@" not in e or len(e) > 100) for e in emails.split(","))):
                 raise HTTPException(status_code=400, detail="收件邮箱格式有误")
             set_setting(conn, "notify_emails", emails)
+        if "bank_names" in body:
+            raw = body.get("bank_names")
+            mapping = {}
+            if isinstance(raw, dict):
+                items = raw.items()
+            elif isinstance(raw, str) and raw.strip():
+                try:
+                    parsed = json.loads(raw)
+                except ValueError:
+                    raise HTTPException(status_code=400, detail="银行显示名格式有误")
+                items = parsed.items() if isinstance(parsed, dict) else []
+            else:
+                items = []
+            for original, display in items:
+                original, display = str(original).strip()[:30], str(display).strip()[:30]
+                if original:
+                    mapping[original] = display
+            if len(mapping) > 50:
+                raise HTTPException(status_code=400, detail="银行显示名最多 50 条")
+            set_setting(conn, "bank_names", json.dumps(mapping, ensure_ascii=False) if mapping else "")
         if "notify_lead_days" in body:
             n = int(body["notify_lead_days"])
             if not 1 <= n <= 30:
