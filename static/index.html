@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.4">
+  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.5">
   <title>Fiscus</title>
 </head>
 <body>
@@ -87,12 +87,12 @@
         <div class="settings-group">
           <div class="settings-title">界面与品牌</div>
           <div class="form-row"><label>应用名称</label><input class="input" id="set-app-name" maxlength="12"></div>
-          <div class="form-row">
+          <div class="form-row form-row-stack">
             <label>主题色</label>
-            <div class="color-row">
-              <div class="palette" id="set-palette"></div>
-              <input type="color" id="set-color" class="color-picker" value="#4F6EF7">
-              <input type="text" class="input hex-input" id="set-color-hex" maxlength="7" placeholder="#RRGGBB" spellcheck="false">
+            <div class="palette" id="set-palette"></div>
+            <div class="color-input-row">
+              <input type="text" class="input" id="set-color-hex" maxlength="7" placeholder="自定义 #RRGGBB" spellcheck="false">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-set-color-reset">恢复默认</button>
             </div>
           </div>
           <div class="form-row">
@@ -214,12 +214,11 @@
       <div class="form-row"><label>还款日</label><input type="number" class="input sm" id="f-repay" min="1" max="31" value="5"><span class="unit">每月几号</span></div>
       <div class="form-row"><label>账单日</label><input type="number" class="input sm" id="f-bill" min="0" max="31" value="0"><span class="unit">可不填</span></div>
       <div class="form-row"><label>额度</label><input type="number" class="input sm" id="f-limit" min="0" placeholder="选填"><span class="unit">元</span></div>
-      <div class="form-row">
+      <div class="form-row form-row-stack">
         <label>卡片主题色</label>
-        <div class="color-row">
-          <div class="palette" id="f-palette"></div>
-          <input type="color" id="f-color" class="color-picker" value="#4F6EF7">
-          <input type="text" class="input hex-input" id="f-color-hex" maxlength="7" placeholder="#RRGGBB" spellcheck="false">
+        <div class="palette" id="f-palette"></div>
+        <div class="color-input-row">
+          <input type="text" class="input" id="f-color-hex" maxlength="7" placeholder="自定义 #RRGGBB" spellcheck="false">
         </div>
         <div class="form-hint">无卡面图时的卡面底色与列表头像色，即这张卡的主题色</div>
       </div>
@@ -249,6 +248,6 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="/assets/app.js?v=1.1.0-beta.4"></script>
+  <script src="/assets/app.js?v=1.1.0-beta.5"></script>
 </body>
 </html>

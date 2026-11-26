@@ -92,8 +92,19 @@ a { color: var(--accent); text-decoration: none; }
 .hex-input { width: 110px; flex: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: .5px; }
 .color-row { display: flex; align-items: center; gap: 12px; }
 .palette { display: flex; gap: 8px; flex-wrap: wrap; }
-.palette .swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; }
-.palette .swatch.on { border-color: var(--text); }
+.palette .swatch {
+  width: 30px; height: 30px; border-radius: 10px; cursor: pointer;
+  border: none; padding: 0; appearance: none; -webkit-appearance: none;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.palette .swatch.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--text); }
+.form-row-stack { flex-direction: column; align-items: stretch; gap: 5px; }
+.form-row-stack > label { width: auto; }
+.color-input-row { display: flex; gap: 8px; align-items: center; }
+.color-input-row .input {
+  flex: 1; min-width: 0; padding: 9px 12px; font-size: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 
 /* ============ 登录页 ============ */
 .login-wrap {
@@ -230,7 +241,8 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   color: #fff; background: var(--accent); box-shadow: var(--shadow);
   border: 1px solid rgba(255, 255, 255, .18);
 }
-.wallet-card + .wallet-card { margin-top: -88px; }
+/* 层叠折叠卡（小米钱包式）：只露顶部信息条，卡间留细缝 */
+.wallet-card + .wallet-card { margin-top: -46%; border-top: 6px solid var(--bg); }
 
 /* ---- 卡包展开态（点卡置顶展开 + 基本信息块，其余卡露边） ---- */
 /* 过渡质感对齐 SubDeck 左滑胶囊：主体 transform .25s ease，辅助层 opacity .15s ease */
@@ -251,7 +263,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .wallet-card-mini { cursor: pointer; }
 .wallet-card-mini .wallet-face { opacity: .92; transition: opacity .15s ease; }
 .wallet-card-mini:hover .wallet-face { opacity: 1; }
-.wallet-card-mini + .wallet-card-mini { margin-top: -88px; }
+.wallet-card-mini + .wallet-card-mini { margin-top: -46%; border-top: 6px solid var(--bg); }
 .wallet-info-panel {
   margin-top: 14px; background: var(--panel); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
@@ -534,4 +546,15 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .bank-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .bank-name-row .bn-from, .bank-name-row .bn-to { flex: 1; min-width: 0; width: 60px; }
 .bank-name-row .bn-arrow { color: var(--text-3, #98a2b3); flex: none; }
+/* 银行显示名折叠条（照 SubDeck 回收记录手风琴样式） */
+.bank-fold { margin-top: 6px; }
+.bank-fold summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; font-size: 12.5px; color: var(--text-2); padding: 8px 10px;
+  border: 1px dashed var(--line); border-radius: var(--radius); background: transparent;
+}
+.bank-fold summary::-webkit-details-marker { display: none; }
+.bank-fold summary .fold-arrow::after { content: "▾"; font-size: 11px; }
+.bank-fold[open] summary .fold-arrow::after { content: "▴"; }
+.bank-fold .bank-name-row { margin-top: 6px; }
 .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }

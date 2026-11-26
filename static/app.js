@@ -747,9 +747,9 @@ function openCardModal(id = null) {
   $("#f-bill").value = c?.bill_day || 0;
   $("#f-limit").value = c?.limit_amount || "";
   $("#f-notes").value = c?.notes || "";
-  $("#f-color").value = c?.color || PALETTE[2];
-  $("#f-color-hex").value = $("#f-color").value.toUpperCase();
-  renderPalette($("#f-palette"), $("#f-color").value);
+  $("#f-color-hex").value = (c?.color || PALETTE[2]).toUpperCase();
+  renderPalette($("#f-palette"), $("#f-color-hex").value);
+  bindColorHex($("#f-color-hex"), $("#f-palette"));
   const pv = $("#f-image-preview");
   pv.innerHTML = c?.image_url ? `<img src="${esc(c.image_url)}">` : "";
   $("#btn-f-image-clear").classList.toggle("hidden", !c?.image_url);
@@ -820,7 +820,7 @@ $("#btn-card-save")?.addEventListener("click", async () => {
     name, bank: $("#f-bank").value.trim(),
     repay_day: +($("#f-repay").value || 5), bill_day: +($("#f-bill").value || 0),
     limit: +($("#f-limit").value || 0), notes: $("#f-notes").value.trim(),
-    color: $("#f-color").value,
+    color: readHex($("#f-color-hex"), PALETTE[2]),
   };
   let cardId = state.editId;
   try {
@@ -852,30 +852,33 @@ $("#btn-card-save")?.addEventListener("click", async () => {
 function renderPalette(box, active) {
   box.innerHTML = PALETTE.map((c) =>
     `<button class="swatch ${c === active ? "on" : ""}" data-c="${c}" style="background:${c}"></button>`).join("");
-  $$(".swatch", box).forEach((el) => el.addEventListener("click", () => {
-    $("#f-color").value = el.dataset.c;
-    renderPalette(box, el.dataset.c);
+}
+/* 色号输入框为唯一真值源（SubDeck 同款）：色块点击回填输入框，输入合法时刷新高亮 */
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+function bindColorHex(hexEl, paletteBox) {
+  if (!hexEl || !paletteBox) return;
+  hexEl.addEventListener("input", () => {
+    const v = hexEl.value.trim().toUpperCase();
+    if (HEX_RE.test(v)) renderPalette(paletteBox, v);
+  });
+  $$(".swatch", paletteBox).forEach((el) => el.addEventListener("click", () => {
+    hexEl.value = el.dataset.c.toUpperCase();
+    renderPalette(paletteBox, el.dataset.c);
   }));
 }
-/* 色号输入框与取色器/预设块双向同步（SubDeck 同款交互） */
-const HEX_RE = /^#[0-9a-fA-F]{6}$/;
-function bindHexSync(hexEl, pickerEl, paletteBox) {
-  if (!hexEl || !pickerEl) return;
-  hexEl.addEventListener("input", () => {
-    const v = hexEl.value.trim();
-    if (!HEX_RE.test(v)) return;
-    pickerEl.value = v;
-    renderPalette(paletteBox, v.toUpperCase());
-  });
-  hexEl.addEventListener("change", () => {
-    const v = hexEl.value.trim();
-    hexEl.value = HEX_RE.test(v) ? v.toUpperCase() : pickerEl.value.toUpperCase();
-  });
-  pickerEl.addEventListener("input", () => { hexEl.value = pickerEl.value.toUpperCase(); });
+function readHex(hexEl, fallback = "") {
+  const v = (hexEl?.value || "").trim().toUpperCase();
+  return HEX_RE.test(v) ? v : fallback;
 }
-$("#f-color")?.addEventListener("input", () => renderPalette($("#f-palette"), $("#f-color").value));
-bindHexSync($("#f-color-hex"), $("#f-color"), $("#f-palette"));
-bindHexSync($("#set-color-hex"), $("#set-color"), $("#set-palette"));
+/* 恢复默认主题色（照 SubDeck btn-theme-reset：直接保存空值回默认色） */
+$("#btn-set-color-reset")?.addEventListener("click", async () => {
+  try {
+    await api("/api/settings", { method: "PUT", body: { theme_color: "" } });
+    state.settings = await api("/api/settings");
+    applyBrand(); fillSettings();
+    toast("已恢复默认主题色");
+  } catch (ex) { toast(ex.message); }
+});
 
 /* ---------------------------------------------------------------- 银行显示名 */
 function bankNameMap() {
@@ -887,20 +890,36 @@ function bankDisplay(bank) {
   return bankNameMap()[bank.trim()] || bank;
 }
 
-function renderBankNameRows(map) {
-  const box = $("#bank-name-rows");
-  if (!box) return;
-  const entries = Object.entries(map || {});
-  box.innerHTML = entries.map(([from, to]) => `
+/* 银行显示名折叠（照 SubDeck 回收记录手风琴骨架）：超过阈值折叠为汇总条，展开状态跨重渲染记忆 */
+const BANK_FOLD_MAX = 5;
+let bankFoldOpen = false;
+const bankRowHTML = (from = "", to = "") => `
     <div class="bank-name-row">
       <input class="input bn-from" placeholder="完整银行名" maxlength="30" value="${esc(from)}">
       <span class="bn-arrow">→</span>
       <input class="input bn-to" placeholder="显示名" maxlength="30" value="${esc(to)}">
       <button class="icon-btn bn-del" title="删除">×</button>
-    </div>`).join("");
+    </div>`;
+
+function renderBankNameRows(map) {
+  const box = $("#bank-name-rows");
+  if (!box) return;
+  const entries = Object.entries(map || {});
+  const rows = entries.map(([from, to]) => bankRowHTML(from, to)).join("");
+  box.innerHTML = entries.length > BANK_FOLD_MAX
+    ? `<details class="bank-fold"${bankFoldOpen ? " open" : ""}>
+        <summary>银行显示名 ${entries.length} 条 · 点开编辑<span class="fold-arrow" aria-hidden="true"></span></summary>
+        ${rows}
+      </details>`
+    : rows;
   $$(".bank-name-row .bn-del", box).forEach((el) =>
     el.addEventListener("click", () => el.closest(".bank-name-row").remove()));
 }
+/* toggle 不冒泡，用捕获监听把展开状态带到下一次重渲染 */
+$("#bank-name-rows")?.addEventListener("toggle", (e) => {
+  const fold = e.target.closest?.(".bank-fold");
+  if (fold) bankFoldOpen = fold.open;
+}, true);
 function collectBankNameRows() {
   const map = {};
   $$("#bank-name-rows .bank-name-row").forEach((row) => {
@@ -912,13 +931,17 @@ function collectBankNameRows() {
 }
 $("#btn-bank-name-add")?.addEventListener("click", () => {
   const box = $("#bank-name-rows");
+  const fold = box.querySelector(".bank-fold");
+  if (fold) {                        // 折叠态加行：先展开容器，行插到 details 内
+    bankFoldOpen = true;
+    fold.open = true;
+    fold.insertAdjacentHTML("beforeend", bankRowHTML());
+    $(".bn-del", fold.lastElementChild).addEventListener("click", () => fold.lastElementChild.remove());
+    return;
+  }
   const div = document.createElement("div");
   div.className = "bank-name-row";
-  div.innerHTML = `
-    <input class="input bn-from" placeholder="完整银行名" maxlength="30">
-    <span class="bn-arrow">→</span>
-    <input class="input bn-to" placeholder="显示名" maxlength="30">
-    <button class="icon-btn bn-del" title="删除">×</button>`;
+  div.innerHTML = bankRowHTML();
   box.appendChild(div);
   $(".bn-del", div).addEventListener("click", () => div.remove());
 });
@@ -934,9 +957,9 @@ $("#btn-bank-name-save")?.addEventListener("click", async () => {
 function fillSettings() {
   const s = state.settings || {};
   $("#set-app-name").value = s.app_name || "";
-  $("#set-color").value = s.theme_color || "#4F6EF7";
-  $("#set-color-hex").value = $("#set-color").value.toUpperCase();
-  renderPalette($("#set-palette"), s.theme_color || "#4F6EF7");
+  $("#set-color-hex").value = (s.theme_color || "").toUpperCase();
+  renderPalette($("#set-palette"), s.theme_color || "");
+  bindColorHex($("#set-color-hex"), $("#set-palette"));
   $("#icon-preview").innerHTML = s.brand_icon ? `<img src="/api/brand/icon?v=${Date.now() % 1e7}">` : "F";
   $("#set-bg-select").value = s.bg_image?.startsWith("preset:") ? s.bg_image : (s.bg_image ? "upload:" : "");
   $("#set-bg-mask").value = s.bg_mask ?? 35;
@@ -953,12 +976,6 @@ function fillSettings() {
   $("#set-smtp-pass").value = s.smtp_pass || "";
   $("#about-version").textContent = `v${state.me?.version || ""}`;
 }
-$("#set-palette")?.addEventListener("click", (e) => {
-  const el = e.target.closest(".swatch");
-  if (!el) return;
-  $("#set-color").value = el.dataset.c;
-  renderPalette($("#set-palette"), el.dataset.c);
-});
 $("#set-bg-select")?.addEventListener("change", () => {
   $("#set-bg-file").classList.toggle("hidden", $("#set-bg-select").value !== "upload:");
 });
@@ -966,7 +983,7 @@ $("#btn-save-brand")?.addEventListener("click", async () => {
   try {
     const body = {
       app_name: $("#set-app-name").value.trim(),
-      theme_color: $("#set-color").value,
+      theme_color: readHex($("#set-color-hex"), ""),
       bg_mask: +$("#set-bg-mask").value,
       skin: document.querySelector('input[name="set-skin"]:checked')?.value || "glass",
     };
