@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.9">
+  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.10">
   <title>Fiscus</title>
 </head>
 <body>
@@ -66,7 +66,7 @@
             <button class="seg-btn active" data-view="list">列表</button>
             <button class="seg-btn" data-view="wallet">卡包</button>
           </div>
-          <button class="btn btn-ghost btn-sm" id="btn-add-card">+ 添加卡片</button>
+          <button class="btn btn-primary btn-sm" id="btn-add-card">＋ 添加卡片</button>
         </div>
 
         <!-- 列表视图 -->
@@ -318,22 +318,22 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <!-- 导出备份包选项弹窗（照 SubDeck）：敏感信息勾选 -->
-  <div id="export-mask" class="modal-mask hidden">
-    <div class="modal">
-      <div class="modal-head"><span>导出备份包</span><button class="icon-btn" id="btn-export-cancel">×</button></div>
+  <!-- 导出备份包选项弹窗（照 SubDeck modal-confirm）：居中卡片 + 敏感信息勾选 -->
+  <div id="export-mask" class="modal-mask modal-confirm-mask hidden">
+    <div class="modal modal-confirm">
       <div class="modal-body">
+        <div class="form-row" style="margin-bottom:8px;"><label style="font-size:15px;font-weight:600;">导出备份包</label></div>
         <div class="form-hint">备份包含全部卡片、账单、年费、权益与设置。是否包含敏感信息（如 SMTP 授权码）？包含后在新环境导入即可直接使用。</div>
         <label class="check" style="display:flex; align-items:center; gap:8px; margin-top:10px; cursor:pointer;">
           <input type="checkbox" id="export-sensitive"> 包含敏感信息（SMTP 授权码等）
         </label>
       </div>
       <div class="modal-foot">
-        <button type="button" class="btn btn-ghost" id="btn-export-cancel2">取消</button>
-        <button type="button" class="btn" id="btn-export-go">导出</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-export-cancel2">取消</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-export-go">导出</button>
       </div>
     </div>
   </div>
-  <script src="/assets/app.js?v=1.1.0-beta.9"></script>
+  <script src="/assets/app.js?v=1.1.0-beta.10"></script>
 </body>
 </html>

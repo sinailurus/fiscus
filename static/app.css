@@ -111,8 +111,11 @@ a { color: var(--accent); text-decoration: none; }
 .file-name { font-size: 12px; color: var(--text-3, #98a2b3); max-width: 140px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ---- 设置页桌面适配（照抄 SubDeck）：≥1024 左 sticky 导航 + 右内容 ---- */
+/* ---- 设置页桌面适配（照抄 SubDeck）：平板竖屏/电脑UA 面板收窄居中；≥1024 左 sticky 导航 + 右内容 ---- */
 .settings-nav { display: none; }
+@media (min-width: 768px) and (max-width: 1023px) {
+  #tab-settings .settings-group { max-width: 760px; margin-inline: auto; }
+}
 @media (min-width: 1024px) {
   #tab-settings {
     display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 26px;
@@ -219,12 +222,17 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .topbar {
   position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; margin: 0 -16px;
+  padding: 10px 16px;
+}
+/* 玻璃底用 ::before 拉满视口宽：容器居中限宽时顶条也能横贯全屏（SubDeck 视觉等价） */
+.topbar::before {
+  content: ""; position: absolute; top: 0; bottom: 0;
+  left: calc(50% - 50vw); right: calc(50% - 50vw); z-index: -1;
   background: color-mix(in srgb, var(--card) 88%, transparent);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
-@media (min-width: 760px) { .topbar { margin: 0; padding-left: 0; padding-right: 0; } }
+@media (min-width: 760px) { .topbar { padding: 10px 16px 10px 92px; } }
 .topbar-brand { display: flex; align-items: center; gap: 10px; }
 .brand-mark {
   width: 34px; height: 34px; border-radius: 10px; background: var(--accent);
@@ -592,6 +600,13 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 }
 .modal-body { padding: 16px 18px; overflow-y: auto; }
 .modal-foot { display: flex; justify-content: space-between; gap: 10px; padding: 12px 18px calc(16px + env(safe-area-inset-bottom)); }
+/* 小型确认弹窗（照抄 SubDeck modal-confirm）：居中卡片，不再底部上弹 */
+.modal-mask.modal-confirm-mask { align-items: center; padding: 0 16px; }
+.modal.modal-confirm {
+  max-width: 320px; width: auto; border-radius: 18px;
+  inset: 50% auto auto 50%; transform: translate(-50%, -50%);
+}
+.modal.modal-confirm .modal-foot { justify-content: flex-end; padding: 12px 0 0; }
 .toast {
   position: fixed; z-index: 99; left: 50%; bottom: calc(var(--tabbar-h) + 24px);
   transform: translateX(-50%); background: var(--text); color: var(--bg);
