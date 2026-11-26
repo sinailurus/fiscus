@@ -45,8 +45,9 @@ a { color: var(--accent); text-decoration: none; }
 /* ============ 通用控件 ============ */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  border-radius: 999px; padding: 9px 18px; font-size: 14px; font-weight: 500;
-  border: 1px solid transparent; transition: filter .12s, background .12s;
+  border-radius: 10px; padding: 9px 16px; font-size: 14px; font-weight: 500;
+  border: 1px solid var(--line); background: var(--card); color: var(--text);
+  cursor: pointer; white-space: nowrap; transition: filter .12s, background .12s;
 }
 .btn:active { filter: brightness(.92); }
 .btn-primary { background: var(--accent); color: #fff; }
@@ -174,9 +175,14 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   .app-main { padding-left: 76px; padding-bottom: 32px; }
 }
 .topbar {
+  position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 0 10px;
+  padding: 10px 16px; margin: 0 -16px;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
 }
+@media (min-width: 760px) { .topbar { margin: 0; padding-left: 0; padding-right: 0; } }
 .topbar-brand { display: flex; align-items: center; gap: 10px; }
 .brand-mark {
   width: 34px; height: 34px; border-radius: 10px; background: var(--accent);
@@ -234,17 +240,16 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 
 /* ============ 卡包视图（完整卡面层叠，最临期完整置顶） ============ */
 .card-wallet { display: flex; flex-direction: column; }
+/* 小米钱包式无缝层叠：容器无底色无边框，卡面图铺满到圆角边缘 */
 .wallet-card {
   position: relative;   /* 后卡按 DOM 顺序盖住前卡下部（钱包堆叠） */
   isolation: isolate;   /* 封闭内部 z-index，卡面文字不穿透到上层卡 */
   border-radius: 16px; overflow: hidden;
-  color: #fff; background: var(--accent); box-shadow: var(--shadow);
-  border: 1px solid rgba(255, 255, 255, .18);
+  color: #fff; background: transparent; box-shadow: var(--shadow);
 }
-[data-theme="light"] .wallet-face { border-color: rgba(17, 24, 39, .06); }  /* 浅色下白描边是层叠缝白边的来源 */
 .badge.tag { margin-right: 6px; }
-/* 层叠折叠卡（小米钱包式）：只露顶部信息条，卡间留半透明细缝（有背景图时透出背景） */
-.wallet-card + .wallet-card { margin-top: -46%; border-top: 6px solid color-mix(in srgb, var(--bg) 55%, transparent); }
+/* 层叠折叠卡：纯负 margin 紧贴，无缝无描边 */
+.wallet-card + .wallet-card { margin-top: -46%; }
 
 /* ---- 卡包展开态（点卡置顶展开 + 基本信息块，其余卡露边） ---- */
 /* 过渡质感对齐 SubDeck 左滑胶囊：主体 transform .25s ease，辅助层 opacity .15s ease */
@@ -265,7 +270,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .wallet-card-mini { cursor: pointer; }
 .wallet-card-mini .wallet-face { opacity: .92; transition: opacity .15s ease; }
 .wallet-card-mini:hover .wallet-face { opacity: 1; }
-.wallet-card-mini + .wallet-card-mini { margin-top: -46%; border-top: 6px solid color-mix(in srgb, var(--bg) 55%, transparent); }
+.wallet-card-mini + .wallet-card-mini { margin-top: -46%; }
 .wallet-info-panel {
   margin-top: 14px; background: var(--panel); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
@@ -297,6 +302,8 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .wallet-face {
   aspect-ratio: 85.6 / 54;      /* ISO ID-1 实体银行卡比例，卡面图完整显示 */
   background-size: cover; background-position: center;
+  background-origin: border-box; background-clip: border-box;  /* 图铺满到边缘，杜绝底色外露 */
+  border-radius: 16px;
   padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between;
   position: relative;
 }
@@ -442,12 +449,13 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .detail-title { font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .detail-body { padding: 14px 16px 40px; }
 .detail-face {
-  border-radius: 16px; overflow: hidden; color: #fff; background: var(--accent);
-  border: 1px solid rgba(255, 255, 255, .18); box-shadow: var(--shadow);
+  border-radius: 16px; overflow: hidden; color: #fff; background: transparent;
+  box-shadow: var(--shadow);
 }
 .detail-face-inner {
   aspect-ratio: 85.6 / 54;      /* 与实体卡同比例 */
   background-size: cover; background-position: center;
+  background-origin: border-box; background-clip: border-box;
   padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between;
   position: relative;
 }
