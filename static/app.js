@@ -799,6 +799,7 @@ $("#f-image")?.addEventListener("change", () => {
   if (file.size > 4 * 1024 * 1024) { toast("图片不能超过 4MB"); return; }
   state.editImageFile = file;
   state.editImageCleared = false;
+  $("#f-image-name").textContent = file.name;
   const reader = new FileReader();
   reader.onload = () => { $("#f-image-preview").innerHTML = `<img src="${reader.result}">`; };
   reader.readAsDataURL(file);
@@ -807,6 +808,7 @@ $("#btn-f-image-clear")?.addEventListener("click", () => {
   state.editImageFile = null;
   state.editImageCleared = true;
   $("#f-image-preview").innerHTML = "";
+  $("#f-image-name").textContent = "未选择";
   $("#btn-f-image-clear").classList.add("hidden");
 });
 $("#f-bank-logo")?.addEventListener("change", () => {
@@ -816,6 +818,7 @@ $("#f-bank-logo")?.addEventListener("change", () => {
   if (file.size > 2 * 1024 * 1024) { toast("图片不能超过 2MB"); return; }
   state.editBankLogoFile = file;
   state.editBankLogoCleared = false;
+  $("#f-bank-logo-name").textContent = file.name;
   const reader = new FileReader();
   reader.onload = () => { $("#f-bank-logo-preview").innerHTML = `<img src="${reader.result}">`; };
   reader.readAsDataURL(file);
@@ -824,6 +827,7 @@ $("#btn-f-bank-logo-clear")?.addEventListener("click", () => {
   state.editBankLogoFile = null;
   state.editBankLogoCleared = true;
   $("#f-bank-logo-preview").innerHTML = "";
+  $("#f-bank-logo-name").textContent = "未选择";
   $("#btn-f-bank-logo-clear").classList.add("hidden");
 });
 $("#btn-card-save")?.addEventListener("click", async () => {
@@ -978,6 +982,7 @@ function fillSettings() {
   $("#set-bg-select").value = s.bg_image?.startsWith("preset:") ? s.bg_image : (s.bg_image ? "upload:" : "");
   $("#set-bg-mask").value = s.bg_mask ?? 35;
   document.querySelectorAll('input[name="set-skin"]').forEach((r) => r.checked = r.value === (s.skin || "glass"));
+  if (state.me?.logged_in) updateBackupRollback();
   renderBankNameRows(bankNameMap());
   $("#set-notify-on").setAttribute("aria-pressed", s.notify_enabled ? "true" : "false");
   $("#set-notify-emails").value = s.notify_emails || "";
@@ -1103,17 +1108,17 @@ $$(".tab-item").forEach((el) =>
 })();
 
 /* ---------------------------------------------------------------- 数据备份：导出 / 导入 / 回滚（照抄 SubDeck v1.6.11 逻辑） */
+function updateBackupRollback() {
+  api("/api/import-status").then((r) => {
+    $("#btn-rollback")?.classList.toggle("hidden", !r.has_rollback);
+  }).catch(() => {});
+}
 (function () {
   const mask = $("#export-mask");
   const btnExport = $("#btn-export");
   if (!btnExport || !mask) return;
   const btnRollback = $("#btn-rollback");
   const note = $("#backup-note");
-
-  /* 回滚按钮显隐：有存档才显示 */
-  api("/api/import-status").then((r) => {
-    if (r.has_rollback) btnRollback.classList.remove("hidden");
-  }).catch(() => {});
 
   /* 导出：弹选项 → 下载 → 按是否含敏感给出对应提醒 */
   btnExport.addEventListener("click", () => mask.classList.remove("hidden"));

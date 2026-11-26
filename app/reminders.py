@@ -17,7 +17,7 @@ BENEFIT_LEAD_DEFAULT = 14    # 权益清零提前提醒（天）
 CARD_FIELDS = (
     "id", "name", "bank", "color", "card_image", "bill_day",
     "repay_day", "lead_days", "limit_amount", "notes", "sort_order",
-    "bank_logo", "report_combined",
+    "bank_logo", "report_combined", "network", "level",
 )
 
 

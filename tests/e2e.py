@@ -95,7 +95,7 @@ with sync_playwright() as p:
     check("编辑弹窗回填卡名", pg.input_value("#f-name") != "",
           f"got={pg.input_value('#f-name')!r}")
     check("编辑弹窗标题正确", "编辑" in pg.inner_text("#card-modal-title"))
-    check("编辑表单含银行 Logo 上传", pg.is_visible("#f-bank-logo"))
+    check("编辑表单含银行 Logo 上传", pg.is_visible(".file-btn") and pg.locator("#f-bank-logo").count() == 1)
     pg.click("#btn-card-modal-close")
     pg.wait_for_timeout(300)
     pg.locator(".card-row").first.click()

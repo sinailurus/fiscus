@@ -89,12 +89,16 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_benefits_card ON benefits(card_id);
             """
         )
-        # 旧库平滑升级（v1.0.x 无银行 logo / 信报合一列）
+        # 旧库平滑升级（v1.0.x 无银行 logo / 信报合一列；1.1.x 无卡组织/等级列）
         cols = {r[1] for r in conn.execute("PRAGMA table_info(cards)")}
         if "bank_logo" not in cols:
             conn.execute("ALTER TABLE cards ADD COLUMN bank_logo TEXT NOT NULL DEFAULT ''")
         if "report_combined" not in cols:
             conn.execute("ALTER TABLE cards ADD COLUMN report_combined INTEGER NOT NULL DEFAULT 0")
+        if "network" not in cols:
+            conn.execute("ALTER TABLE cards ADD COLUMN network TEXT NOT NULL DEFAULT ''")
+        if "level" not in cols:
+            conn.execute("ALTER TABLE cards ADD COLUMN level TEXT NOT NULL DEFAULT ''")
 
 
 @contextmanager
