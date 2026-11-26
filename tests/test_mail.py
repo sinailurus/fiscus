@@ -68,9 +68,12 @@ repay_entries = [e for e in entries if e["kind"] == "repay"]
 check("还款条目齐全", len(repay_entries) == 3, f"got={len(repay_entries)}")
 check("过长卡名截断省略", "…" in html and long_name not in html)
 check("无图卡用首字色块", "bgcolor" in html and ">招<" in html)
-check("信报合一银行归组", "招商银行" in html and html.count("padding:4px 0 0 32px") == 2,
-      f"组子行数={html.count('padding:4px 0 0 32px')}")
-check("日期格式月-日", iso(2)[5:] in html and iso(3)[5:] in html)
+check("全部按银行分组", html.count('font-weight:600;color:#1A2029;') == 2
+      and html.count("padding:6px 0;font-size:13px") == 3,
+      f"组头={html.count('font-weight:600;color:#1A2029;')} 子行={html.count('padding:6px 0;font-size:13px')}")
+check("三栏表头齐全", "信用卡" in html and "账单日" in html and "还款日" in html)
+check("副标题文案", "张信用卡待还款" in html and "未来" in html)
+check("还款日完整日期", iso(2) in html and iso(3) in html)
 check("无图时无 CID 引用", "cid:" not in html)
 
 # 自传图场景（伪造磁盘文件走 CID 注册）

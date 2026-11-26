@@ -578,7 +578,6 @@ function openCardModal(id = null) {
   $("#f-limit").value = c?.limit_amount || "";
   $("#f-notes").value = c?.notes || "";
   $("#f-color").value = c?.color || PALETTE[2];
-  $("#f-combined").checked = !!c?.report_combined;
   renderPalette($("#f-palette"), $("#f-color").value);
   const pv = $("#f-image-preview");
   pv.innerHTML = c?.image_url ? `<img src="${esc(c.image_url)}">` : "";
@@ -651,7 +650,6 @@ $("#btn-card-save")?.addEventListener("click", async () => {
     repay_day: +($("#f-repay").value || 5), bill_day: +($("#f-bill").value || 0),
     limit: +($("#f-limit").value || 0), notes: $("#f-notes").value.trim(),
     color: $("#f-color").value,
-    report_combined: $("#f-combined").checked ? 1 : 0,
   };
   let cardId = state.editId;
   try {

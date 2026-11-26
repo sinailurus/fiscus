@@ -163,6 +163,7 @@ def notify_entries(conn: sqlite3.Connection, lead_days: int) -> list[dict]:
                 "detail": f"应还 {amount}；宽限以银行 App 显示为准",
                 "bank": c["bank"], "color": c["color"],
                 "image_url": c["image_url"], "bank_logo_url": c["bank_logo_url"],
+                "bill_day": c["bill_day"],
                 "combined": bool(c["report_combined"]),
             })
         f = c["fee"]

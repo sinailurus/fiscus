@@ -58,14 +58,13 @@ def _card_thumb(entry: dict, cids: dict, images: dict) -> str:
 
 
 def _bank_badge(bank: str, entry: dict, cids: dict, images: dict) -> str:
-    """银行组头标识：自传 logo 优先，否则首字色块（按银行名取色）。"""
+    """银行组头标识：仅自传 logo 时显示（正方形）；未上传则留空。"""
     url = entry.get("bank_logo_url") or ""
     if url:
         cid = _pic_cid(url, cids, images)
         if cid:
             return f'<img src="cid:{cid}" width="24" height="24" alt="" style="border-radius:5px;vertical-align:middle;">'
-    color = PALETTE[sum(map(ord, bank or "?")) % len(PALETTE)]
-    return _block_initial((bank or "?").strip()[:1], color, 24)
+    return ""
 
 
 def _pic_cid(url: str, cids: dict, images: dict) -> str:
@@ -151,82 +150,72 @@ def _color(days: int) -> str:
 
 
 def _row(entries: list[dict], cids: dict, images: dict) -> str:
-    """一组同类条目：普通行（带卡图），信报合一的银行归组渲染。"""
+    """按银行分组渲染（统一信报合一版式）：组头 logo + 子行（卡图 卡名 账单日 还款日）。"""
     html = []
-    # 合一组：同银行名下任一卡勾选信报合一 → 该银行所有条目归组
-    banks = {}
-    singles = []
+    banks: dict[str, list[dict]] = {}
     for e in entries:
-        b = (e.get("bank") or "").strip()
-        if b and e.get("combined"):
-            banks.setdefault(b, []).append(e)
-        elif b and any(x.get("combined") for x in entries if (x.get("bank") or "").strip() == b):
-            banks.setdefault(b, []).append(e)
-        else:
-            singles.append(e)
+        banks.setdefault((e.get("bank") or "").strip() or "其他", []).append(e)
 
-    group_tpl = (
-        '<div style="padding:8px 0;border-top:1px solid #E8EBF1;">'
-        '<div style="font-size:13px;font-weight:600;color:#1A2029;">{badge} {bank}</div>{sub}</div>'
+    head_tpl = (
+        '<tr><td colspan="3" style="padding:10px 0 6px;font-size:13px;font-weight:600;color:#1A2029;">'
+        '{badge}　{bank}</td></tr>'
     )
-    sub_tpl = (
-        '<div style="display:flex;justify-content:space-between;gap:12px;'
-        'padding:4px 0 0 32px;font-size:12px;color:#556;">'
-        '<span>{card}　{detail}</span>'
-        '<span style="white-space:nowrap;color:{color};font-weight:600;">{date} · {when}</span></div>'
+    card_tpl = (
+        '<tr><td style="padding:6px 0;font-size:13px;color:#333;">'
+        '{thumb} <span style="font-weight:600;">{card}</span></td>'
+        '<td align="center" style="font-size:13px;color:#556;">{bill_day}</td>'
+        '<td align="right" style="font-size:13px;color:{color};font-weight:600;white-space:nowrap;">{date}</td></tr>'
     )
-    item_tpl = (
-        '<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;'
-        'padding:8px 0;border-top:1px solid #E8EBF1;font-size:13px;color:#333;">'
-        '<span>{thumb} <span style="font-weight:600;">{card}</span>　'
-        '<span style="color:#889;">{detail}</span></span>'
-        '<span style="white-space:nowrap;color:{color};font-weight:600;">{date} · {when}</span></div>'
-    )
+    rows = []
     for bank, items in banks.items():
-        subs = "".join(
-            sub_tpl.format(card=_short(e["card"]), detail=e["detail"], when=_when(e["days"]),
-                           date=e["date"][5:], color=_color(e["days"]))
-            for e in items)
-        html.append(group_tpl.format(bank=bank, badge=_bank_badge(bank, items[0], cids, images), sub=subs))
-    for e in singles:
-        html.append(item_tpl.format(thumb=_card_thumb(e, cids, images), card=_short(e["card"]),
-                                    detail=e["detail"], date=e["date"][5:],
-                                    when=_when(e["days"]), color=_color(e["days"])))
-    return "".join(html)
+        rows.append(head_tpl.format(bank=bank, badge=_bank_badge(bank, items[0], cids, images)))
+        for e in items:
+            bill_day = f"每月 {e['bill_day']} 号" if e.get("bill_day") else "—"
+            rows.append(card_tpl.format(
+                thumb=_card_thumb(e, cids, images), card=_short(e["card"]),
+                bill_day=bill_day, date=e["date"], color=_color(e["days"])))
+    return (
+        '<table cellpadding="0" cellspacing="0" width="100%" '
+        'style="border-collapse:collapse;margin-top:4px;">'
+        '<tr><td align="left" style="padding:0 0 6px;font-size:12px;color:#889;">信用卡</td>'
+        '<td align="center" style="padding:0 0 6px;font-size:12px;color:#889;">账单日</td>'
+        '<td align="right" style="padding:0 0 6px;font-size:12px;color:#889;">还款日</td></tr>'
+        + "".join(rows) + "</table>"
+    )
 
 
 def build_html(app_name: str, entries: list[dict], lead: int,
                cids: dict | None = None, images: dict | None = None) -> str:
-    """汇总邮件：按 还款 / 年费 / 权益清零 三段分组，条目带卡图与日期。
+    """汇总邮件（2026-11-26 二次定稿）：仿 SubDeck 到期提醒版式。
 
-    cids / images 由调用方传入两个空 dict；发送时把 images 作为内嵌附件挂到
-    multipart/related，正文里的 cid 引用即可显示。
+    副标题「未来 N 天内共有 M 张信用卡待还款」，表格式正文：
+    信用卡（卡图+名称，占宽栏） | 账单日 | 还款日（右两栏收窄）。
+    所有卡片统一按银行分组（组头银行 logo / 首字色块）。
+    年费与权益不在表格内，落款小字提示条数。
     """
     cids = cids if cids is not None else {}
     images = images if images is not None else {}
-    rows = ""
-    groups = {}
-    for e in entries:
-        groups.setdefault(e["kind"], []).append(e)
-    section_tpl = (
-        '<div style="margin:0 0 16px;padding:12px 16px;background:#F5F7FB;border-radius:10px;">'
-        '<div style="font-size:15px;font-weight:600;color:#1A2029;margin-bottom:8px;">{title}</div>{items}</div>'
-    )
-    for kind in ("repay", "fee", "benefit"):
-        items = groups.get(kind)
-        if not items:
-            continue
-        rows += section_tpl.format(title=f"{KIND_LABEL[kind]}（{len(items)} 项）",
-                                   items=_row(items, cids, images))
+    repay = [e for e in entries if e["kind"] == "repay"]
+    extra = [e for e in entries if e["kind"] != "repay"]
 
-    repay_n = len(groups.get("repay", []))
-    summary = f"未来 {lead} 天有 {len(entries)} 项待办" + (f"，其中 {repay_n} 笔还款" if repay_n else "")
+    body = _row(repay, cids, images) if repay else '<p style="font-size:13px;color:#667;">暂无待还款信用卡。</p>'
+    extra_note = ""
+    if extra:
+        names = "、".join(f"{e['card']}（{KIND_LABEL[e['kind']]}，{e['date'][5:]}）" for e in extra[:5])
+        extra_note = (
+            f'<p style="font-size:12px;color:#667;margin:12px 0 0;">'
+            f'另有 {len(extra)} 项年费 / 权益提醒：{names}{"等" if len(extra) > 5 else ""}。</p>'
+        )
+
     return (
         f'<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;'
         f'max-width:560px;margin:0 auto;padding:24px 16px;">'
-        f'<h2 style="font-size:18px;color:#1A2029;margin:0 0 4px;">{app_name}</h2>'
-        f'<p style="font-size:13px;color:#667;margin:0 0 16px;">{summary}</p>'
-        f'{rows or "<p style=\'font-size:13px;color:#667;\'>暂无待办。</p>"}'
+        f'<h2 style="font-size:18px;color:#1A2029;margin:0 0 4px;">{app_name} · 还款提醒</h2>'
+        f'<p style="font-size:13px;color:#667;margin:0 0 12px;">'
+        f'未来 <span style="color:#1A2029;font-weight:600;">{lead} 天内</span>'
+        f'共有 <span style="color:#1A2029;font-weight:600;">{len(repay)}</span> 张信用卡待还款：</p>'
+        f'{body}'
+        f'{extra_note}'
         f'<p style="font-size:12px;color:#99A;margin-top:24px;">'
         f'日期与金额以发卡行 App 显示为准，本邮件由 {app_name} 自动发送。</p></div>'
     )
@@ -262,7 +251,8 @@ def _notify_loop() -> None:
                 app_name = get_setting(conn, "app_name", "Fiscus") or "Fiscus"
                 cfg = _smtp_cfg(conn, app_name)
                 cfg["to"] = emails
-                subject = f"{app_name} · 未来 {lead} 天有 {len(entries)} 项待办"
+                repay_n = len([e for e in entries if e["kind"] == "repay"])
+                subject = f"{app_name} · 未来 {lead} 天有 {repay_n} 张信用卡待还款"
                 cids: dict = {}
                 images: dict = {}
                 html = build_html(app_name, entries, lead, cids, images)
