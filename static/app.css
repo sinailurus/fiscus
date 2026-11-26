@@ -195,8 +195,26 @@ a { color: var(--accent); text-decoration: none; }
   border: 1px solid rgba(255, 255, 255, .18);
 }
 .wallet-card + .wallet-card { margin-top: -88px; }
+
+/* ---- 卡包展开态（点卡置顶展开 + 基本信息块，其余卡露边） ---- */
+.wallet-open { margin-bottom: 16px; }
+.wallet-open .wallet-face { box-shadow: var(--shadow); }
+.wallet-card-mini { cursor: pointer; }
+.wallet-card-mini .wallet-face { opacity: .92; }
+.wallet-card-mini + .wallet-card-mini { margin-top: -88px; }
+.wallet-info-panel {
+  margin-top: 14px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+}
+.wip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+.wip-item { min-width: 0; }
+.wip-k { display: block; font-size: 11px; color: var(--text-3, #98a2b3); margin-bottom: 2px; }
+.wip-v { display: block; font-size: 13px; color: var(--text); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wip-actions { display: flex; gap: 10px; margin-top: 14px; }
 .wallet-face {
-  height: 150px; background-size: cover; background-position: center;
+  aspect-ratio: 85.6 / 54;      /* ISO ID-1 实体银行卡比例，卡面图完整显示 */
+  background-size: cover; background-position: center;
   padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between;
   position: relative;
 }
@@ -298,7 +316,8 @@ a { color: var(--accent); text-decoration: none; }
   border: 1px solid rgba(255, 255, 255, .18); box-shadow: var(--shadow);
 }
 .detail-face-inner {
-  height: 150px; background-size: cover; background-position: center;
+  aspect-ratio: 85.6 / 54;      /* 与实体卡同比例 */
+  background-size: cover; background-position: center;
   padding: 14px 16px; display: flex; flex-direction: column; justify-content: space-between;
   position: relative;
 }
@@ -340,7 +359,9 @@ a { color: var(--accent); text-decoration: none; }
 .form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .form-row > label { width: 84px; flex: none; font-size: 13px; color: var(--text-2); }
 .form-row > .input, .form-row > .upload-row, .form-row > .inline-inputs, .form-row > .color-row { flex: 1; min-width: 0; }
-.upload-row { display: flex; align-items: center; gap: 10px; }
+.form-row > .form-hint { flex-basis: 100%; }   /* 提示文字独占一行，不挤压上传控件 */
+.upload-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.upload-row .file-input { min-width: 0; flex: 1 1 150px; max-width: 100%; }
 .icon-preview {
   width: 40px; height: 40px; border-radius: 12px; flex: none; overflow: hidden;
   background: var(--accent-weak); color: var(--accent); font-weight: 600;
@@ -409,5 +430,6 @@ a { color: var(--accent); text-decoration: none; }
 .form-hint { margin-top: 4px; font-size: 12px; color: var(--text-3, #98a2b3); }
 .logo-preview { width: 32px; height: 32px; border-radius: 8px; }
 .bank-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.bank-name-row .bn-from, .bank-name-row .bn-to { flex: 1; min-width: 0; }
+.bank-name-row .bn-from, .bank-name-row .bn-to { flex: 1; min-width: 0; width: 60px; }
 .bank-name-row .bn-arrow { color: var(--text-3, #98a2b3); flex: none; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }

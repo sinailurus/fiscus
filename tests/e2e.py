@@ -132,18 +132,31 @@ with sync_playwright() as p:
     check("日期条渲染", pg.locator(".date-cell").count() >= 14)
     pg.screenshot(path=SHOT + "04_mobile_todo.png")
 
-    # 卡包视图切换
+    # 卡包视图点卡 → 展开态（置顶卡 + 基本信息块 + 编辑按钮），点编辑进编辑弹窗
     pg.locator('.tab-item[data-tab="cards"]').click()
     pg.click('.seg-btn[data-view="wallet"]')
     pg.wait_for_timeout(500)
-    check("卡包视图渲染", pg.locator(".wallet-card").count() == 3)
+    check("卡包视图渲染", pg.locator(".wallet-card").count() >= 3)
+    pg.locator(".wallet-card").first.click(position={"x": 100, "y": 20})
+    pg.wait_for_selector(".wallet-info-panel", timeout=5000)
+    check("卡包展开态含信息块", pg.is_visible(".wallet-info-panel"))
+    pg.click("#btn-wallet-edit")
+    pg.wait_for_selector("#card-modal:not(.hidden)", timeout=5000)
+    check("展开态编辑按钮进编辑弹窗", pg.input_value("#f-name") != "")
+    pg.click("#btn-card-modal-close")
+    pg.wait_for_timeout(300)
+    pg.click("#btn-wallet-collapse")
+    pg.wait_for_timeout(300)
+    check("收起返回层叠", pg.locator(".wallet-info-panel").count() == 0)
     pg.screenshot(path=SHOT + "05_mobile_wallet.png")
 
-    # 卡包视图点卡（点第一张卡顶部露出区，避免点到被后卡覆盖的区域）
+    # 展开态：点底部折叠卡面 → 恢复完整层叠视图
     pg.locator(".wallet-card").first.click(position={"x": 100, "y": 20})
-    pg.wait_for_selector("#card-detail:not(.hidden)", timeout=5000)
-    pg.click("#btn-detail-close")
-    check("卡包视图点卡开详情", True)
+    pg.wait_for_selector(".wallet-info-panel", timeout=5000)
+    pg.locator(".wallet-card-mini").last.click(position={"x": 100, "y": 10})
+    pg.wait_for_timeout(500)
+    check("点折叠卡恢复完整视图", pg.locator(".wallet-info-panel").count() == 0
+          and pg.locator(".wallet-card").count() >= 3)
 
     # 设置页
     pg.locator('.tab-item[data-tab="settings"]').click()
@@ -162,10 +175,10 @@ with sync_playwright() as p:
     pg2.click("#btn-login")
     pg2.wait_for_selector("#view-app:not(.hidden)", timeout=5000)
     check("桌面端登录进入", pg2.is_visible("#view-app"))
-    pg2.click('.seg-btn[data-view="wallet"]')
+    pg2.click('.seg-btn[data-view="list"]')
     pg2.wait_for_timeout(400)
-    pg2.screenshot(path=SHOT + "07_desktop_wallet.png")
-    pg2.locator(".wallet-card").first.click(position={"x": 100, "y": 20})
+    pg2.screenshot(path=SHOT + "07_desktop_list.png")
+    pg2.locator(".card-row").first.click()
     pg2.wait_for_selector("#card-detail:not(.hidden)", timeout=5000)
     pg2.screenshot(path=SHOT + "08_desktop_drawer.png")
     check("桌面抽屉打开", pg2.is_visible("#card-detail"))

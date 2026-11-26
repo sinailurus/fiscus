@@ -422,6 +422,8 @@ def create_card(request: Request, body: dict):
 def update_card(request: Request, card_id: int, body: dict):
     require_auth(request)
     data = _validate_card(body, partial=True)
+    if "limit" in data:                     # limit 是 SQLite 保留字，落库用真实列名
+        data["limit_amount"] = data.pop("limit")
     with db() as conn:
         if not conn.execute("SELECT id FROM cards WHERE id=?", (card_id,)).fetchone():
             raise HTTPException(status_code=404, detail="卡片不存在")

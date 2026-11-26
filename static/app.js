@@ -13,6 +13,7 @@ const PALETTE = ["#ef5350", "#ab63f6", "#5c9dff", "#26a69a", "#66bb6a",
 const state = {
   me: null, settings: null, overview: null,
   tab: "cards", cardView: localStorage.getItem("fiscus-view") || "list",
+  walletOpenId: null,
   detailId: null, editId: null, editImageFile: null, editImageCleared: false,
 };
 
@@ -168,30 +169,83 @@ function renderCardList(cards, urgent) {
   $$(".card-row", box).forEach((el) =>
     el.addEventListener("click", () => openDetail(+el.dataset.id)));
 }
+function walletFaceHTML(c, urgent) {
+  return `
+    <div class="wallet-face" style="background-color:${esc(c.color)};${c.image_url ? `background-image:url('${esc(c.image_url)}')` : ""}">
+      <div class="wallet-top">
+        <div>
+          <div class="wallet-bank">${esc(bankDisplay(c.bank) || c.name)}</div>
+          <div class="wallet-sub">${esc(c.name)}${c.notes ? ` · ${esc(c.notes)}` : ""}</div>
+        </div>
+        <div class="wallet-badge-row">${dueBadge(c.next_due_days, c.bill_paid, urgent)}</div>
+      </div>
+      <div class="wallet-top">
+        <div>
+          <div class="wallet-due">${c.bill_paid ? "已还清" : amountText(c)}</div>
+          <div class="wallet-sub">每月 ${c.repay_day} 号还款${c.limit_amount ? ` · 额度 ¥${fmtMoney(c.limit_amount)}` : ""}</div>
+        </div>
+        ${c.image_url ? "" : '<div class="wallet-chip"></div>'}
+      </div>
+    </div>`;
+}
 function renderCardWallet(cards, urgent) {
   const box = $("#card-wallet");
   if (!cards.length) { box.innerHTML = ""; return; }
-  box.innerHTML = cards.map((c) => `
-    <div class="wallet-card" data-id="${c.id}">
-      <div class="wallet-face" style="background-color:${esc(c.color)};${c.image_url ? `background-image:url('${esc(c.image_url)}')` : ""}">
-        <div class="wallet-top">
-          <div>
-            <div class="wallet-bank">${esc(bankDisplay(c.bank) || c.name)}</div>
-            <div class="wallet-sub">${esc(c.name)}${c.notes ? ` · ${esc(c.notes)}` : ""}</div>
+  const openCard = cards.find((c) => c.id === state.walletOpenId);
+
+  /* 展开态：被点的卡置顶完整展示 + 基本信息块（含编辑入口），其余卡收到底部露边 */
+  if (openCard) {
+    const rest = cards.filter((c) => c.id !== openCard.id);
+    box.innerHTML = `
+      <div class="wallet-open">
+        ${walletFaceHTML(openCard, urgent)}
+        <div class="wallet-info-panel">
+          <div class="wip-grid">
+            <div class="wip-item"><span class="wip-k">卡名</span><span class="wip-v">${esc(openCard.name)}</span></div>
+            <div class="wip-item"><span class="wip-k">银行</span><span class="wip-v">${esc(bankDisplay(openCard.bank) || "—")}</span></div>
+            <div class="wip-item"><span class="wip-k">还款日</span><span class="wip-v">每月 ${openCard.repay_day} 号 · ${openCard.bill_paid ? "已还" : `${openCard.next_due_days} 天后`}</span></div>
+            <div class="wip-item"><span class="wip-k">账单日</span><span class="wip-v">${openCard.bill_day ? `每月 ${openCard.bill_day} 号` : "未填"}</span></div>
+            <div class="wip-item"><span class="wip-k">额度</span><span class="wip-v">${openCard.limit_amount ? `¥${fmtMoney(openCard.limit_amount)}` : "—"}</span></div>
+            <div class="wip-item"><span class="wip-k">备注</span><span class="wip-v">${esc(openCard.notes || "—")}</span></div>
           </div>
-          <div class="wallet-badge-row">${dueBadge(c.next_due_days, c.bill_paid, urgent)}</div>
-        </div>
-        <div class="wallet-top">
-          <div>
-            <div class="wallet-due">${c.bill_paid ? "已还清" : amountText(c)}</div>
-            <div class="wallet-sub">每月 ${c.repay_day} 号还款${c.limit_amount ? ` · 额度 ¥${fmtMoney(c.limit_amount)}` : ""}</div>
+          <div class="wip-actions">
+            <button class="btn btn-primary btn-sm" id="btn-wallet-edit">编辑</button>
+            <button class="btn btn-ghost btn-sm" id="btn-wallet-collapse">收起</button>
           </div>
-          <div class="wallet-chip"></div>
         </div>
       </div>
-    </div>`).join("") + `<div class="wallet-hint">点任意卡查看详情 · 临期的卡完整置顶</div>`;
+      ${rest.map((c) => `
+        <div class="wallet-card wallet-card-mini" data-id="${c.id}">
+          ${walletFaceHTML(c, urgent)}
+        </div>`).join("")}
+      <div class="wallet-hint">点折叠卡面或空白处恢复完整视图</div>`;
+    $("#btn-wallet-edit", box)?.addEventListener("click", () => openCardModal(openCard.id));
+    const collapse = () => {
+      state.walletOpenId = null;
+      renderCardWallet(cards, urgent);
+    };
+    $("#btn-wallet-collapse", box)?.addEventListener("click", collapse);
+    /* 点底部折叠卡面或空白处 → 恢复完整层叠视图 */
+    $$(".wallet-card-mini", box).forEach((el) => el.addEventListener("click", collapse));
+    box.onclick = (e) => {
+      if (e.target.closest(".wallet-open") || e.target.closest(".wallet-card-mini")) return;
+      collapse();
+    };
+    return;
+  }
+
+  /* 层叠态 */
+  box.onclick = null;              /* 清掉展开态遗留的空白收起监听，防冒泡误触 */
+  box.innerHTML = cards.map((c) => `
+    <div class="wallet-card" data-id="${c.id}">
+      ${walletFaceHTML(c, urgent)}
+    </div>`).join("") + `<div class="wallet-hint">点卡片展开详情 · 临期的卡完整置顶</div>`;
   $$(".wallet-card", box).forEach((el) =>
-    el.addEventListener("click", () => openDetail(+el.dataset.id)));
+    el.addEventListener("click", (ev) => {
+      ev.stopPropagation();        /* 阻断冒泡，防同一次点击被容器收起逻辑吃掉 */
+      state.walletOpenId = +el.dataset.id;
+      renderCardWallet(cards, urgent);
+    }));
 }
 $("#card-view-seg")?.addEventListener("click", (e) => {
   const btn = e.target.closest(".seg-btn");
@@ -235,7 +289,7 @@ function faceBlock(c) {
           <div class="wallet-bank">${esc(c.bank || c.name)}</div>
           <div class="wallet-sub">${esc(c.name)}${c.notes ? ` · ${esc(c.notes)}` : ""}</div>
         </div>
-        <div class="wallet-chip"></div>
+        ${c.image_url ? "" : '<div class="wallet-chip"></div>'}
       </div>
       <div class="wallet-top">
         <div class="wallet-due">${c.bill_paid ? "已还清" : amountText(c)}</div>
@@ -509,6 +563,23 @@ function renderTodo() {
         </div>`).join("") : `<div class="empty-tip">7 天内没有需要还款的卡。</div>`}
     </div>`);
 
+  /* 本期已还：可撤销（勾选后本周期静默，撤销后恢复提醒） */
+  const doneCards = o.cards.filter((c) => c.bill_paid);
+  sections.push(`
+    <div class="todo-section">
+      <div class="todo-title"><span>本期已还</span>
+        <span class="todo-count">${doneCards.length} 张 · 点 ✓ 可撤销</span></div>
+      ${doneCards.length ? doneCards.map((c) => `
+        <div class="todo-item done" data-id="${c.id}">
+          <button class="todo-check" title="撤销已还">✓</button>
+          <div class="todo-main">
+            <div class="todo-name">${esc(c.name)}</div>
+            <div class="todo-sub">${esc(c.next_due)} · ${amountText(c)}</div>
+          </div>
+          <span class="badge badge-ok">已还</span>
+        </div>`).join("") : `<div class="empty-tip">本期暂无已还的卡。</div>`}
+    </div>`);
+
   const fees = o.cards.filter((c) => c.fee?.alert);
   sections.push(`
     <div class="todo-section">
@@ -542,16 +613,17 @@ function renderTodo() {
 
   $("#todo-sections").innerHTML = sections.join("");
 
-  /* 勾选打卡 = 标记已还 */
+  /* 勾选打卡 = 标记已还 / 撤销已还 */
   $$("#todo-sections .todo-check").forEach((el) =>
-    el.addEventListener("click", async () => {
+    el.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
       const id = +el.closest(".todo-item").dataset.id;
       const c = o.cards.find((x) => x.id === id);
-      if (!c || c.bill_paid) return;
+      if (!c) return;
       await api(`/api/cards/${id}/bill`, { method: "POST",
-        body: { period: c.next_period, paid: true, due_date: c.next_due,
+        body: { period: c.next_period, paid: !c.bill_paid, due_date: c.next_due,
                 ...(c.bill_amount !== null ? { amount: c.bill_amount } : {}) } });
-      toast(`${c.name} 已标记还清`);
+      toast(c.bill_paid ? `${c.name} 已撤销，提醒恢复` : `${c.name} 已标记还清`);
       await refreshOverview();
     }));
   /* 点条目开详情 */
@@ -851,6 +923,7 @@ $$(".tab-item").forEach((el) =>
   el.addEventListener("click", async () => {
     const tab = el.dataset.tab;
     state.tab = tab;
+    state.walletOpenId = null;      // 离开卡包即收起展开态
     $$(".tab-item").forEach((b) => b.classList.toggle("active", b === el));
     ["cards", "todo", "settings"].forEach((t) =>
       $(`#tab-${t}`).classList.toggle("hidden", t !== tab));
