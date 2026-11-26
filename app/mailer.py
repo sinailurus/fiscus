@@ -58,13 +58,13 @@ def _card_thumb(entry: dict, cids: dict, images: dict) -> str:
 
 
 def _bank_badge(bank: str, entry: dict, cids: dict, images: dict) -> str:
-    """银行组头标识：仅自传 logo 时显示（正方形）；未上传则留空。"""
+    """银行组头标识：自传 logo 显示正方形图；未上传渲染同宽占位，保证组头名称对齐。"""
     url = entry.get("bank_logo_url") or ""
     if url:
         cid = _pic_cid(url, cids, images)
         if cid:
             return f'<img src="cid:{cid}" width="24" height="24" alt="" style="border-radius:5px;vertical-align:middle;">'
-    return ""
+    return '<span style="display:inline-block;width:24px;"></span>'
 
 
 def _pic_cid(url: str, cids: dict, images: dict) -> str:
@@ -175,8 +175,8 @@ def _row(entries: list[dict], cids: dict, images: dict, bank_map: dict | None = 
         '{badge}　{bank}</td></tr>'
     )
     card_tpl = (
-        '<tr><td style="padding:6px 0 6px 36px;font-size:13px;color:#333;">'
-        '{thumb} <span style="font-weight:600;">{card}</span></td>'
+        '<tr><td style="padding:6px 0 6px 36px;font-size:13px;color:#333;overflow:hidden;">'
+        '{thumb} <span style="font-weight:600;white-space:nowrap;">{card}</span></td>'
         '<td align="center" style="font-size:13px;color:#556;">{bill_day}</td>'
         '<td align="right" style="font-size:13px;color:{color};font-weight:600;white-space:nowrap;">{date}</td></tr>'
     )
@@ -187,12 +187,13 @@ def _row(entries: list[dict], cids: dict, images: dict, bank_map: dict | None = 
         for e in items:
             bill_day = f"每月 {e['bill_day']} 号" if e.get("bill_day") else "—"
             rows.append(card_tpl.format(
-                thumb=_card_thumb(e, cids, images), card=_short(e["card"]),
+                thumb=_card_thumb(e, cids, images), card=_short(e["card"], 14),
                 bill_day=bill_day, date=e["date"], color=_color(e["days"])))
     return (
         '<table cellpadding="0" cellspacing="0" width="100%" '
-        'style="border-collapse:collapse;margin-top:4px;">'
-        '<tr><td align="left" style="padding:0 0 6px;font-size:12px;color:#889;">信用卡</td>'
+        'style="table-layout:fixed;border-collapse:collapse;margin-top:4px;">'
+        '<colgroup><col style="width:54%"><col style="width:20%"><col style="width:26%"></colgroup>'
+        '<tr><td align="left" style="padding:0 0 6px 36px;font-size:12px;color:#889;">信用卡</td>'
         '<td align="center" style="padding:0 0 6px;font-size:12px;color:#889;">账单日</td>'
         '<td align="right" style="padding:0 0 6px;font-size:12px;color:#889;">还款日</td></tr>'
         + "".join(rows) + "</table>"

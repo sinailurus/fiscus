@@ -77,6 +77,8 @@ check("三栏表头齐全", "信用卡" in html and "账单日" in html and "还
 check("副标题文案", "张信用卡待还款" in html and "未来" in html)
 check("还款日完整日期", iso(2) in html and iso(3) in html)
 check("卡行首行缩进", 'padding:6px 0 6px 36px' in html)
+check("表头与卡图列对齐", 'padding:0 0 6px 36px' in html)
+check("固定列宽锁定", "table-layout:fixed" in html)
 check("无图时无 CID 引用", "cid:" not in html)
 
 # 双节点：账单日当天出账提醒
@@ -112,7 +114,9 @@ cids2, images2 = {}, {}
 html2 = build_html("Fiscus", entries2, 5, cids2, images2)
 check("卡面图走 CID 内嵌", 'src="cid:' in html2 and len(images2) >= 1)
 check("银行 logo 走 CID 内嵌", len(images2) >= 2, f"附件数={len(images2)}")
-check("自传 logo 后组头显示", html2.count('width="24"') == 1, f"组头 logo img={html2.count(chr(34)+'width='+chr(34)+'24'+chr(34))}")
+check("自传 logo 后组头显示", html2.count('width="24"') == 1,
+      f"组头 logo img={html2.count('width=' + chr(34) + '24' + chr(34))}")
+check("无 logo 占位保持对齐", html2.count('display:inline-block;width:24px') >= 1)
 
 fails = [r for r in results if not r[1]]
 print(f"\n{len(results) - len(fails)}/{len(results)} 通过")
