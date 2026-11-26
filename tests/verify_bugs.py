@@ -84,10 +84,10 @@ with sync_playwright() as p:
     check("卡面为实体卡比例", abs(ar - 85.6 / 54) < 0.02, f"ratio={ar:.3f} 目标={85.6 / 54:.3f}")
     pg.screenshot(path=SHOT + "12_fix_wallet_ratio.png")
 
-    # bug4：编辑弹窗上传行不重叠
+    # bug4：编辑弹窗上传行不重叠（经卡包展开态的编辑按钮进入）
     pg.locator(".wallet-card").first.click(position={"x": 100, "y": 20})
-    pg.wait_for_selector("#card-detail:not(.hidden)")
-    pg.click("#btn-detail-edit")
+    pg.wait_for_selector(".wallet-info-panel", timeout=5000)
+    pg.click("#btn-wallet-edit")
     pg.wait_for_selector("#card-modal:not(.hidden)")
     row_box = pg.locator("#f-bank-logo").bounding_box()
     hint_box = pg.locator("#f-bank-logo ~ * , .form-hint").first.bounding_box()

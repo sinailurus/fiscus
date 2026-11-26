@@ -197,14 +197,29 @@ a { color: var(--accent); text-decoration: none; }
 .wallet-card + .wallet-card { margin-top: -88px; }
 
 /* ---- 卡包展开态（点卡置顶展开 + 基本信息块，其余卡露边） ---- */
-.wallet-open { margin-bottom: 16px; }
-.wallet-open .wallet-face { box-shadow: var(--shadow); }
+/* 过渡质感对齐 SubDeck 左滑胶囊：主体 transform .25s ease，辅助层 opacity .15s ease */
+@keyframes walletExpand {
+  from { opacity: 0; transform: translateY(26px) scale(.965); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes walletFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes walletCollapse {
+  to { opacity: 0; transform: translateY(18px) scale(.97); }
+}
+.wallet-open { margin-bottom: 16px; animation: walletExpand .25s ease; }
+.wallet-open .wallet-face { box-shadow: var(--shadow); cursor: pointer; }
+.wallet-open.closing { animation: walletCollapse .25s ease both; pointer-events: none; }
 .wallet-card-mini { cursor: pointer; }
-.wallet-card-mini .wallet-face { opacity: .92; }
+.wallet-card-mini .wallet-face { opacity: .92; transition: opacity .15s ease; }
+.wallet-card-mini:hover .wallet-face { opacity: 1; }
 .wallet-card-mini + .wallet-card-mini { margin-top: -88px; }
 .wallet-info-panel {
   margin-top: 14px; background: var(--panel); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+  animation: walletFade .15s ease .12s both;
 }
 .wip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
 .wip-item { min-width: 0; }
@@ -212,6 +227,9 @@ a { color: var(--accent); text-decoration: none; }
 .wip-v { display: block; font-size: 13px; color: var(--text); font-weight: 500;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wip-actions { display: flex; gap: 10px; margin-top: 14px; }
+@media (prefers-reduced-motion: reduce) {
+  .wallet-open, .wallet-open.closing, .wallet-info-panel { animation: none; }
+}
 .wallet-face {
   aspect-ratio: 85.6 / 54;      /* ISO ID-1 实体银行卡比例，卡面图完整显示 */
   background-size: cover; background-position: center;
@@ -243,6 +261,12 @@ a { color: var(--accent); text-decoration: none; }
 }
 .wallet-card .badge-ok, .detail-face .badge-ok {
   background: rgba(97, 171, 131, .8); color: #fff;
+}
+/* 卡面图上浅色徽章（蓝/灰档）加深为实底白字，保证任意卡面图上都清晰 */
+.wallet-card .badge-blue, .detail-face .badge-blue,
+.wallet-card .badge-deep, .detail-face .badge-deep {
+  background: rgba(36, 54, 96, .82); color: #fff; border-color: transparent;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
 .wallet-hint {
   text-align: center; color: var(--text-2); font-size: 12px; padding: 14px 0 4px;
@@ -356,7 +380,7 @@ a { color: var(--accent); text-decoration: none; }
   padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow);
 }
 .settings-title { font-weight: 600; margin-bottom: 12px; }
-.form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
 .form-row > label { width: 84px; flex: none; font-size: 13px; color: var(--text-2); }
 .form-row > .input, .form-row > .upload-row, .form-row > .inline-inputs, .form-row > .color-row { flex: 1; min-width: 0; }
 .form-row > .form-hint { flex-basis: 100%; }   /* 提示文字独占一行，不挤压上传控件 */

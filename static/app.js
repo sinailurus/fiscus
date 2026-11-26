@@ -221,10 +221,23 @@ function renderCardWallet(cards, urgent) {
       <div class="wallet-hint">点折叠卡面或空白处恢复完整视图</div>`;
     $("#btn-wallet-edit", box)?.addEventListener("click", () => openCardModal(openCard.id));
     const collapse = () => {
-      state.walletOpenId = null;
-      renderCardWallet(cards, urgent);
+      /* 先播收起过渡再回层叠（时长对齐 CSS .25s ease） */
+      const open = $(".wallet-open", box);
+      if (open && !open.classList.contains("closing")) {
+        open.classList.add("closing");
+        setTimeout(() => {
+          state.walletOpenId = null;
+          renderCardWallet(cards, urgent);
+        }, 250);
+        box.onclick = null;
+      } else {
+        state.walletOpenId = null;
+        renderCardWallet(cards, urgent);
+      }
     };
     $("#btn-wallet-collapse", box)?.addEventListener("click", collapse);
+    /* 点本卡卡面同样收起 */
+    $(".wallet-open .wallet-face", box)?.addEventListener("click", collapse);
     /* 点底部折叠卡面或空白处 → 恢复完整层叠视图 */
     $$(".wallet-card-mini", box).forEach((el) => el.addEventListener("click", collapse));
     box.onclick = (e) => {
