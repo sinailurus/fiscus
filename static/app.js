@@ -773,14 +773,14 @@ function openCardModal(id = null) {
   $("#btn-f-bank-logo-clear").classList.toggle("hidden", !c?.bank_logo_url);
   $("#btn-card-delete").classList.toggle("hidden", !id);
   $("#modal-mask").classList.remove("hidden");
-  $("#card-modal").classList.remove("hidden");
 }
 function closeCardModal() {
   $("#modal-mask").classList.add("hidden");
-  $("#card-modal").classList.add("hidden");
 }
 $("#btn-card-modal-close")?.addEventListener("click", closeCardModal);
-$("#modal-mask")?.addEventListener("click", closeCardModal);
+$("#modal-mask")?.addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) closeCardModal();   /* 照 SubDeck：仅点遮罩空白处关闭 */
+});
 $("#btn-add-card")?.addEventListener("click", () => openCardModal());
 $("#btn-detail-edit")?.addEventListener("click", () => {
   const id = state.detailId;      /* closeDetail 会清空 detailId，先取值 */
@@ -871,7 +871,7 @@ $("#btn-card-save")?.addEventListener("click", async () => {
 });
 function renderPalette(box, active) {
   box.innerHTML = PALETTE.map((c) =>
-    `<button class="swatch ${c === active ? "on" : ""}" data-c="${c}" style="background:${c}"></button>`).join("");
+    `<button class="swatch ${c === active ? "on" : ""} ${c === "#4F6EF7" ? "default" : ""}" data-c="${c}" style="${c === "#4F6EF7" && c !== active ? `background:linear-gradient(135deg,#4F6EF7 50%,#6d87ff 50%)` : `background:${c}`}"></button>`).join("");
 }
 /* 色号输入框为唯一真值源（SubDeck 同款）：色块点击回填输入框，输入合法时刷新高亮 */
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;

@@ -50,16 +50,25 @@ a { color: var(--accent); text-decoration: none; }
   cursor: pointer; white-space: nowrap; transition: filter .12s, background .12s;
 }
 .btn:active { filter: brightness(.92); }
-.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 .btn-ghost { background: transparent; color: var(--text); border-color: var(--line); }
-.btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
-.btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-danger { background: transparent; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
+.btn-sm { padding: 5px 12px; font-size: 12.5px; border-radius: 999px; }
 .btn-block { width: 100%; }
 .icon-btn {
-  width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 10px; color: var(--text-2); font-size: 17px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--card); color: var(--text);
+  cursor: pointer; font-size: 17px;
 }
+.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 .icon-btn:active { background: var(--accent-weak); }
+.icon-btn svg { width: 18px; height: 18px; }
+/* 深浅色图标随主题切换（照抄 SubDeck） */
+.i-sun, [data-theme="dark"] .i-moon { display: none; }
+[data-theme="dark"] .i-sun { display: block; }
+.muted { color: var(--text-2); }
+.small { font-size: 13px; }
 .input {
   width: 100%; border: 1px solid var(--line); background: var(--panel);
   color: var(--text); border-radius: 10px; padding: 9px 12px; outline: none;
@@ -83,7 +92,7 @@ a { color: var(--accent); text-decoration: none; }
 .file-input { font-size: 12px; color: var(--text-2); max-width: 220px; }
 .color-picker { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 10px; padding: 2px; background: var(--panel); }
 .skin-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.radio-pill { position: relative; }
+.radio-pill { position: relative; flex: 1; }
 .radio-pill input { position: absolute; opacity: 0; }
 .radio-pill span {
   display: inline-block; padding: 7px 14px; border-radius: 999px; font-size: 13px;
@@ -94,7 +103,7 @@ a { color: var(--accent); text-decoration: none; }
 .color-row { display: flex; align-items: center; gap: 12px; }
 /* 表单统一竖排（SubDeck 设计语言）：label 在上，控件与说明在下，左对齐 */
 .form-row, .form-row-stack {
-  display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 5px; min-width: 0;
 }
 .form-row > label, .form-row-stack > label { width: auto; font-size: 12.5px; font-weight: 600; }
 .form-row > .form-hint, .form-row-stack > .form-hint { text-align: left; }
@@ -158,7 +167,8 @@ a { color: var(--accent); text-decoration: none; }
 }
 .login-card {
   position: relative; z-index: 1; width: 100%; max-width: 340px;
-  background: var(--panel); border-radius: 18px; padding: 32px 26px; box-shadow: var(--shadow);
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 18px; padding: 32px 26px; box-shadow: var(--shadow);
   text-align: center;
   display: flex; flex-direction: column; gap: 12px;   /* SubDeck 同款：元素间自动间距，杜绝拥挤 */
 }
@@ -169,8 +179,9 @@ a { color: var(--accent); text-decoration: none; }
 .login-card .btn { margin-top: 2px; }
 .login-error { color: var(--danger); font-size: 13px; margin: 0; }
 .login-logo {
-  width: 60px; height: 60px; margin: 0 auto 14px; border-radius: 18px;
-  background: var(--accent); color: #fff; font-size: 28px; font-weight: 600;
+  width: 60px; height: 60px; margin: 0 auto; border-radius: 18px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 78%, #ffffff));
+  color: #fff; font-size: 30px; font-weight: 800;
   display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
 .login-logo img { width: 100%; height: 100%; object-fit: cover; }
@@ -233,15 +244,16 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   border-bottom: 1px solid var(--line);
 }
 @media (min-width: 760px) { .topbar { padding: 10px 16px 10px 92px; } }
-.topbar-brand { display: flex; align-items: center; gap: 10px; }
+.topbar-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; }
 .brand-mark {
-  width: 34px; height: 34px; border-radius: 10px; background: var(--accent);
-  color: #fff; font-weight: 600; font-size: 17px;
-  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  width: 28px; height: 28px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 78%, #ffffff));
+  color: #fff; font-weight: 800; font-size: 15px;
+  display: inline-flex; align-items: center; justify-content: center; overflow: hidden;
 }
 .brand-mark img { width: 100%; height: 100%; object-fit: cover; }
-.brand-name { font-size: 17px; font-weight: 600; }
-.topbar-actions { display: flex; gap: 6px; }
+.brand-name { font-size: 17px; font-weight: 700; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
 
 /* 概览条 */
 .summary-bar {
@@ -565,8 +577,9 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 
 /* ============ 设置页 ============ */
 .settings-group {
-  background: var(--panel); border-radius: var(--radius);
-  padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow);
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow);
 }
 .settings-title { font-weight: 600; margin-bottom: 12px; }
 .form-row > .form-hint { flex-basis: 100%; }   /* 提示文字独占一行，不挤压上传控件 */
@@ -585,32 +598,38 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .about-line.sub { font-size: 12px; color: var(--text-3); margin-top: 4px; }
 
 /* ============ 弹窗 / Toast ============ */
-.modal-mask { position: fixed; inset: 0; background: rgba(10, 12, 16, .45); z-index: 50; }
+/* 弹窗体系（照抄 SubDeck）：mask 底部对齐 + modal 底部上弹，桌面媒体查询改居中 */
+.modal-mask {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(10, 14, 24, .45);
+  display: flex; align-items: flex-end; justify-content: center; padding: 0;
+}
 .modal {
-  position: fixed; z-index: 51; inset: auto 0 0 0;
-  background: var(--panel); border-radius: 20px 20px 0 0;
-  max-height: 88vh; display: flex; flex-direction: column;
+  position: relative; z-index: 51; width: 100%; max-width: 640px;
+  background: var(--panel); border-radius: 18px 18px 0 0;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  max-height: 92vh; overflow-y: auto;
 }
+.modal-head { display: flex; align-items: center; justify-content: space-between; font-weight: 600; margin-bottom: 12px; }
+.modal-body { padding: 0; }
+.modal-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 16px; }
 @media (min-width: 760px) {
-  .modal { inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: 420px; border-radius: 20px; }
+  .modal { position: fixed; inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: 420px; max-width: calc(100vw - 32px); border-radius: 18px; }
+  .modal-foot { padding: 0 0 calc(2px + env(safe-area-inset-bottom)); }
 }
-.modal-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px; font-weight: 600;
-}
-.modal-body { padding: 16px 18px; overflow-y: auto; }
-.modal-foot { display: flex; justify-content: space-between; gap: 10px; padding: 12px 18px calc(16px + env(safe-area-inset-bottom)); }
 /* 小型确认弹窗（照抄 SubDeck modal-confirm）：居中卡片，不再底部上弹 */
 .modal-mask.modal-confirm-mask { align-items: center; padding: 0 16px; }
 .modal.modal-confirm {
   max-width: 320px; width: auto; border-radius: 18px;
   inset: 50% auto auto 50%; transform: translate(-50%, -50%);
+  padding: 18px 16px 16px;
 }
-.modal.modal-confirm .modal-foot { justify-content: flex-end; padding: 12px 0 0; }
+.modal.modal-confirm .modal-foot { justify-content: flex-end; margin-top: 12px; }
+.modal h2 { margin: 0 0 14px; font-size: 17px; }
 .toast {
   position: fixed; z-index: 99; left: 50%; bottom: calc(var(--tabbar-h) + 24px);
   transform: translateX(-50%); background: var(--text); color: var(--bg);
-  padding: 9px 18px; border-radius: 999px; font-size: 13px; max-width: 86vw;
+  padding: 10px 18px; border-radius: 12px; font-size: 13.5px; max-width: 86vw;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 

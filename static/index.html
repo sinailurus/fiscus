@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.10">
+  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.11">
   <title>Fiscus</title>
 </head>
 <body>
@@ -42,7 +42,10 @@
           <span class="brand-name" id="brand-name">Fiscus</span>
         </div>
         <div class="topbar-actions">
-          <button class="icon-btn" id="btn-theme" title="深色 / 浅色">◐</button>
+          <button id="btn-theme" class="icon-btn" title="切换深浅色" aria-label="切换深浅色">
+            <svg class="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
           <button class="icon-btn hidden" id="btn-logout" title="退出登录">⎋</button>
         </div>
       </header>
@@ -262,8 +265,8 @@
   </div>
 
   <!-- ============ 卡片编辑弹窗 ============ -->
-  <div id="modal-mask" class="modal-mask hidden"></div>
-  <div id="card-modal" class="modal hidden">
+  <div id="modal-mask" class="modal-mask hidden">
+  <div id="card-modal" class="modal">
     <div class="modal-head"><span id="card-modal-title">添加卡片</span><button class="icon-btn" id="btn-card-modal-close">×</button></div>
     <div class="modal-body">
       <div class="form-row"><label>卡名</label><input class="input" id="f-name" maxlength="30" placeholder="如：招行白金卡"></div>
@@ -315,25 +318,24 @@
       <button class="btn btn-primary" id="btn-card-save">保存</button>
     </div>
   </div>
+  </div>
 
   <div id="toast" class="toast hidden"></div>
 
-  <!-- 导出备份包选项弹窗（照 SubDeck modal-confirm）：居中卡片 + 敏感信息勾选 -->
+  <!-- 导出备份包选项弹窗（整段照抄 SubDeck export-mask）：居中卡片 + 敏感信息勾选 -->
   <div id="export-mask" class="modal-mask modal-confirm-mask hidden">
     <div class="modal modal-confirm">
-      <div class="modal-body">
-        <div class="form-row" style="margin-bottom:8px;"><label style="font-size:15px;font-weight:600;">导出备份包</label></div>
-        <div class="form-hint">备份包含全部卡片、账单、年费、权益与设置。是否包含敏感信息（如 SMTP 授权码）？包含后在新环境导入即可直接使用。</div>
-        <label class="check" style="display:flex; align-items:center; gap:8px; margin-top:10px; cursor:pointer;">
-          <input type="checkbox" id="export-sensitive"> 包含敏感信息（SMTP 授权码等）
-        </label>
-      </div>
+      <h2>导出备份包</h2>
+      <p class="muted small" style="margin:10px 0 4px;">备份包含全部卡片、账单、年费、权益与设置。是否包含敏感信息（如邮箱提醒的 SMTP 授权码）？包含后在新环境导入即可直接使用，无需重新配置。</p>
+      <label style="display:flex; align-items:center; gap:8px; margin:12px 0; cursor:pointer;">
+        <input type="checkbox" id="export-sensitive"> 包含敏感信息（SMTP 授权码等）
+      </label>
       <div class="modal-foot">
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-export-cancel2">取消</button>
-        <button type="button" class="btn btn-primary btn-sm" id="btn-export-go">导出</button>
+        <button type="button" id="btn-export-cancel" class="btn ghost">取消</button>
+        <button type="button" id="btn-export-go" class="btn">导出</button>
       </div>
     </div>
   </div>
-  <script src="/assets/app.js?v=1.1.0-beta.10"></script>
+  <script src="/assets/app.js?v=1.1.0-beta.11"></script>
 </body>
 </html>
