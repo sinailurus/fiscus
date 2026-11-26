@@ -903,9 +903,29 @@ $("#btn-card-save")?.addEventListener("click", async () => {
     await refreshOverview();
   } catch (ex) { toast(ex.message); }
 });
+/* 色块双色预览（照抄 SubDeck v1.6.15）：左上=浅色模式色，右下=深色模式提亮色（L+8/上限 78，与主题注入规则一致） */
+function hexToHsl(hex) {
+  const m = hex.replace("#", "");
+  const r = parseInt(m.slice(0, 2), 16) / 255, g = parseInt(m.slice(2, 4), 16) / 255, b = parseInt(m.slice(4, 6), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  let h = 0, s = 0;
+  if (mx !== mn) {
+    const d = mx - mn;
+    s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h *= 60;
+  }
+  return [h, s * 100, l * 100];
+}
+function accentGrad(c) {
+  const [h, s, l] = hexToHsl(c);
+  return `linear-gradient(135deg, ${c} 50%, hsl(${h | 0} ${s | 0}% ${Math.min(l + 8, 78).toFixed(1)}%) 50%)`;
+}
 function renderPalette(box, active) {
-  box.innerHTML = PALETTE.map((c) =>
-    `<button class="swatch ${c === active ? "on" : ""} ${c === "#4F6EF7" ? "default" : ""}" data-c="${c}" style="${c === "#4F6EF7" && c !== active ? `background:linear-gradient(135deg,#4F6EF7 50%,#6d87ff 50%)` : `background:${c}`}"></button>`).join("");
+  box.innerHTML =
+    `<button class="theme-swatch default ${!active ? "on" : ""}" data-c="" title="默认蓝"></button>` +
+    PALETTE.map((c) =>
+      `<button class="theme-swatch ${c === active ? "on" : ""}" data-c="${c}" style="background:${accentGrad(c)}" title="${c}"></button>`).join("");
 }
 /* 色号输入框为唯一真值源（SubDeck 同款）：色块点击回填输入框，输入合法时刷新高亮 */
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
@@ -915,7 +935,7 @@ function bindColorHex(hexEl, paletteBox) {
     const v = hexEl.value.trim().toUpperCase();
     if (HEX_RE.test(v)) renderPalette(paletteBox, v);
   });
-  $$(".swatch", paletteBox).forEach((el) => el.addEventListener("click", () => {
+  $$(".theme-swatch", paletteBox).forEach((el) => el.addEventListener("click", () => {
     hexEl.value = el.dataset.c.toUpperCase();
     renderPalette(paletteBox, el.dataset.c);
   }));
@@ -1008,6 +1028,20 @@ $("#btn-bank-name-save")?.addEventListener("click", async () => {
 });
 
 /* ---------------------------------------------------------------- 设置页 */
+/* 背景图编辑器状态：null=未改动（保存时不动 bg_image）；''=关闭；'preset:x'=预设（照 SubDeck 交互，选中后仍走保存按钮提交） */
+let pendingBgImage = null;
+function bgPreviewUrl(val) {
+  if (!val) return "";
+  return val.startsWith("preset:") ? `/assets/bg/${val.slice(7)}.jpg` : `/api/brand/background?v=${Date.now() % 1e7}`;
+}
+function syncBgEditor(val) {
+  document.querySelectorAll("#bg-presets .preset-swatch").forEach((b) =>
+    b.classList.toggle("on", b.dataset.preset === val));
+  const prev = $("#bg-preview");
+  const url = bgPreviewUrl(val);
+  prev.style.backgroundImage = url ? `url("${url}")` : "";
+  prev.textContent = url ? "" : "未设置背景图";
+}
 function fillSettings() {
   const s = state.settings || {};
   $("#set-app-name").value = s.app_name || "";
@@ -1015,8 +1049,10 @@ function fillSettings() {
   renderPalette($("#set-palette"), s.theme_color || "");
   bindColorHex($("#set-color-hex"), $("#set-palette"));
   $("#icon-preview").innerHTML = s.brand_icon ? `<img src="/api/brand/icon?v=${Date.now() % 1e7}">` : "F";
-  $("#set-bg-select").value = s.bg_image?.startsWith("preset:") ? s.bg_image : (s.bg_image ? "upload:" : "");
+  pendingBgImage = null;
+  syncBgEditor(s.bg_image || "");
   $("#set-bg-mask").value = s.bg_mask ?? 35;
+  $("#set-bg-mask-value").textContent = `${s.bg_mask ?? 35}%`;
   $("#set-login-title").value = s.login_title || "";
   $("#set-login-welcome").value = s.login_welcome || "";
   $("#set-loginbg-select").value = s.login_bg ? "upload:" : "";
@@ -1037,8 +1073,32 @@ function fillSettings() {
   $("#set-smtp-pass").value = s.smtp_pass || "";
   $("#about-version").textContent = `v${state.me?.version || ""}`;
 }
-$("#set-bg-select")?.addEventListener("change", () => {
-  $("#set-bg-file-btn").classList.toggle("hidden", $("#set-bg-select").value !== "upload:");
+$("#bg-presets")?.addEventListener("click", (e) => {
+  const b = e.target.closest(".preset-swatch");
+  if (!b) return;
+  pendingBgImage = b.dataset.preset;
+  syncBgEditor(pendingBgImage);
+});
+$("#btn-bg-clear")?.addEventListener("click", () => {
+  pendingBgImage = "";
+  syncBgEditor("");
+});
+$("#set-bg-mask")?.addEventListener("input", () => {
+  $("#set-bg-mask-value").textContent = `${$("#set-bg-mask").value}%`;
+});
+$("#set-bg-file")?.addEventListener("change", async () => {
+  const f = $("#set-bg-file").files[0];
+  if (!f) return;
+  try {
+    const fd = new FormData();
+    fd.append("file", f);
+    await api("/api/brand/background", { method: "POST", body: fd });
+    state.settings = await api("/api/settings");
+    pendingBgImage = null;
+    fillSettings();
+    applyBrand();
+    toast("自定义背景已上传并生效");
+  } catch (ex) { toast(ex.message); }
 });
 $("#set-loginbg-select")?.addEventListener("change", () => {
   $("#set-loginbg-btn").classList.toggle("hidden", $("#set-loginbg-select").value !== "upload:");
@@ -1063,8 +1123,7 @@ $("#btn-save-brand")?.addEventListener("click", async () => {
       login_welcome: $("#set-login-welcome").value.trim(),
       login_bg_mask: +$("#set-loginbg-mask").value,
     };
-    const sel = $("#set-bg-select").value;
-    if (sel !== "upload:") body.bg_image = sel;
+    if (pendingBgImage !== null) body.bg_image = pendingBgImage;
     const lsel = $("#set-loginbg-select").value;
     if (lsel !== "upload:") body.login_bg = lsel;
     await api("/api/settings", { method: "PUT", body });
@@ -1072,11 +1131,6 @@ $("#btn-save-brand")?.addEventListener("click", async () => {
       const fd = new FormData();
       fd.append("file", $("#set-icon").files[0]);
       await api("/api/brand/icon", { method: "POST", body: fd });
-    }
-    if ($("#set-bg-file").files[0] && sel === "upload:") {
-      const fd = new FormData();
-      fd.append("file", $("#set-bg-file").files[0]);
-      await api("/api/brand/background", { method: "POST", body: fd });
     }
     if ($("#set-loginbg-file").files[0] && lsel === "upload:") {
       const fd = new FormData();
