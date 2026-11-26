@@ -141,7 +141,7 @@ def _restore_db(db_bytes: bytes) -> dict:
             from .db import db
             stats = {}
             with db() as conn:
-                # settings 按 key UPSERT（先做，避免外库外键干扰业务表）——与 SubDeck 顺序一致放业务表后，此处先读
+                # settings 按 key UPSERT（先做，避免外库外键干扰业务表；与 SubDeck 顺序一致放业务表后，此处先读）
                 src_settings = src.execute("SELECT key, value FROM settings").fetchall()
                 for table in ("cards", "bills", "fees", "benefits"):
                     if table not in tables:
