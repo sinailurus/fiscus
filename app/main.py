@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from . import auth, mailer, reminders
 from .db import MEDIA_DIR, db, get_setting, init_db, set_setting
 
-APP_VERSION = "1.1.0-beta.3"
+APP_VERSION = "1.1.0-beta.4"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 
 CARD_IMAGE_RE = re.compile(r"^card_\d+\.(png|jpg|webp)$")
@@ -28,6 +28,7 @@ PALETTE = ["#ef5350", "#ab63f6", "#5c9dff", "#26a69a", "#66bb6a",
            "#ffa726", "#ff7043", "#ec407a", "#8d6e63", "#78909c"]
 IMAGE_MAX_BYTES = 4 * 1024 * 1024        # 卡面图 4MB
 ALLOWED_BG_PRESETS = {"aurora", "candy", "sunset"}
+ALLOWED_SKINS = {"solid", "glass", "glassplus"}
 ALLOWED_CYCLES = {"daily", "weekly", "monthly", "quarterly", "yearly"}
 
 app = FastAPI(title="Fiscus", version=APP_VERSION, docs_url=None, redoc_url=None)
@@ -144,6 +145,7 @@ def _settings_payload(conn) -> dict:
         "theme_color": get_setting(conn, "theme_color", ""),
         "bg_image": get_setting(conn, "bg_image", ""),
         "bg_mask": int(get_setting(conn, "bg_mask", "35") or 35),
+        "skin": get_setting(conn, "skin", "glass") or "glass",
         "brand_icon": get_setting(conn, "brand_icon", ""),
         "login_title": get_setting(conn, "login_title", ""),
         "login_welcome": get_setting(conn, "login_welcome", ""),
@@ -197,6 +199,10 @@ def put_settings(request: Request, body: dict):
             if not 0 <= mask <= 85:
                 raise HTTPException(status_code=400, detail="遮罩浓度需在 0-85 之间")
             set_setting(conn, "bg_mask", str(mask))
+        if "skin" in body:
+            if body["skin"] not in ALLOWED_SKINS:
+                raise HTTPException(status_code=400, detail="非法的界面风格")
+            set_setting(conn, "skin", body["skin"])
         if "login_title" in body:
             v = str(body["login_title"] or "").strip()
             if len(v) > 24:

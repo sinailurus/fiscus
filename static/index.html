@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.3">
+  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.4">
   <title>Fiscus</title>
 </head>
 <body>
@@ -102,6 +102,15 @@
               <input type="file" id="set-icon" class="file-input" accept="image/png,image/jpeg,image/webp">
               <button class="btn btn-ghost btn-sm" id="btn-clear-icon">恢复默认</button>
             </div>
+          </div>
+          <div class="form-row">
+            <label>界面风格</label>
+            <div class="skin-row">
+              <label class="radio-pill"><input type="radio" name="set-skin" value="solid"><span>实色</span></label>
+              <label class="radio-pill"><input type="radio" name="set-skin" value="glass"><span>点缀玻璃</span></label>
+              <label class="radio-pill"><input type="radio" name="set-skin" value="glassplus"><span>重度玻璃 · 实验</span></label>
+            </div>
+            <div class="form-hint">点缀玻璃：柔和色晕 + 卡片实色，最稳；重度玻璃：卡片半透明毛玻璃，搭配背景图更有层次。</div>
           </div>
           <div class="form-row">
             <label>背景图</label>
@@ -240,6 +249,6 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="/assets/app.js?v=1.1.0-beta.3"></script>
+  <script src="/assets/app.js?v=1.1.0-beta.4"></script>
 </body>
 </html>

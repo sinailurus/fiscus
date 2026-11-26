@@ -55,6 +55,7 @@ function applyTheme(theme) {
 }
 function applyBrand() {
   const s = state.settings || {};
+  document.body.dataset.skin = s.skin || "glass";
   $("#brand-name").textContent = s.app_name || "Fiscus";
   document.title = s.app_name || "Fiscus";
   applyAccent(s.theme_color);
@@ -939,6 +940,7 @@ function fillSettings() {
   $("#icon-preview").innerHTML = s.brand_icon ? `<img src="/api/brand/icon?v=${Date.now() % 1e7}">` : "F";
   $("#set-bg-select").value = s.bg_image?.startsWith("preset:") ? s.bg_image : (s.bg_image ? "upload:" : "");
   $("#set-bg-mask").value = s.bg_mask ?? 35;
+  document.querySelectorAll('input[name="set-skin"]').forEach((r) => r.checked = r.value === (s.skin || "glass"));
   renderBankNameRows(bankNameMap());
   $("#set-notify-on").setAttribute("aria-pressed", s.notify_enabled ? "true" : "false");
   $("#set-notify-emails").value = s.notify_emails || "";
@@ -966,6 +968,7 @@ $("#btn-save-brand")?.addEventListener("click", async () => {
       app_name: $("#set-app-name").value.trim(),
       theme_color: $("#set-color").value,
       bg_mask: +$("#set-bg-mask").value,
+      skin: document.querySelector('input[name="set-skin"]:checked')?.value || "glass",
     };
     const sel = $("#set-bg-select").value;
     if (sel !== "upload:") body.bg_image = sel;

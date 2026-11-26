@@ -5,6 +5,7 @@
   --bg: #F5F6FA;
   --panel: #FFFFFF;
   --panel-2: #FBFBFE;
+  --card: #FFFFFF;
   --text: #1F2430;
   --text-2: #6B7280;
   --text-3: #9CA3AF;
@@ -20,6 +21,7 @@
   --bg: #14161C;
   --panel: #1D2029;
   --panel-2: #22252F;
+  --card: #1D2029;
   --text: #E7E9EE;
   --text-2: #9CA3AF;
   --text-3: #6B7280;
@@ -79,6 +81,14 @@ a { color: var(--accent); text-decoration: none; }
 .switch[aria-pressed="true"] .knob { left: 21px; }
 .file-input { font-size: 12px; color: var(--text-2); max-width: 220px; }
 .color-picker { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 10px; padding: 2px; background: var(--panel); }
+.skin-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.radio-pill { position: relative; }
+.radio-pill input { position: absolute; opacity: 0; }
+.radio-pill span {
+  display: inline-block; padding: 7px 14px; border-radius: 999px; font-size: 13px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--text-2); cursor: pointer;
+}
+.radio-pill input:checked + span { border-color: var(--accent); background: var(--accent-weak); color: var(--accent); font-weight: 600; }
 .hex-input { width: 110px; flex: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: .5px; }
 .color-row { display: flex; align-items: center; gap: 12px; }
 .palette { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -115,6 +125,31 @@ a { color: var(--accent); text-decoration: none; }
 .app { min-height: 100vh; }
 .app-bg {
   position: fixed; inset: 0; background-size: cover; background-position: center; z-index: 0;
+}
+
+/* ---- 界面风格三档（对齐 SubDeck）：实色 / 点缀玻璃 / 重度玻璃 ---- */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(640px 420px at 10% 6%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    radial-gradient(720px 500px at 92% 96%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%);
+  opacity: .72; transition: opacity .25s ease;
+}
+body[data-skin="solid"]::before { opacity: 0; }
+body[data-skin="glassplus"]::before { opacity: 1; }
+/* C 重度玻璃（实验）：大面板半透明毛玻璃，透出色晕/背景图 */
+body[data-skin="glassplus"] {
+  --panel: color-mix(in srgb, var(--card) 74%, transparent);
+  --panel-2: color-mix(in srgb, var(--card) 62%, transparent);
+}
+body[data-skin="glassplus"] :is(.modal, .card-detail, .login-card, .info-card,
+.quick-actions, .todo-item, .wallet-info-panel, .topbar) {
+  backdrop-filter: blur(16px) saturate(1.25);
+  -webkit-backdrop-filter: blur(16px) saturate(1.25);
+  border-color: color-mix(in srgb, var(--line) 55%, transparent);
+}
+body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
+  background: color-mix(in srgb, var(--card) 88%, transparent);
 }
 .app-bg::after {
   content: ""; position: absolute; inset: 0; background: rgba(245, 246, 250, var(--app-mask, .35));
