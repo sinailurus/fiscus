@@ -1,0 +1,4 @@
+# Fiscus 后端依赖（与 SubDeck 同栈，全部为宽松安装的稳定版本）
+fastapi>=0.115,<1.0
+uvicorn>=0.30,<1.0
+python-multipart>=0.0.9

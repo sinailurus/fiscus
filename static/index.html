@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4F6EF7">
+  <meta name="description" content="Fiscus · 自部署信用卡卡包工作台">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
+  <link rel="stylesheet" href="/assets/app.css?v=1.0.0">
+  <title>Fiscus</title>
+</head>
+<body>
+
+  <!-- ===================== 登录视图 ===================== -->
+  <div id="view-login" class="login-wrap hidden">
+    <div class="login-card">
+      <div class="login-logo" id="login-logo">F</div>
+      <div class="login-title" id="login-title">Fiscus</div>
+      <div class="login-welcome" id="login-welcome">你的信用卡卡包工作台</div>
+      <form id="login-form" autocomplete="off">
+        <input type="password" id="login-password" class="input" placeholder="访问密码" autocomplete="current-password">
+        <div id="login-error" class="login-error hidden"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="btn-login">进入卡包</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== 主应用 ===================== -->
+  <div id="view-app" class="app hidden">
+
+    <!-- 背景图层（外观设置启用时显示） -->
+    <div id="app-bg" class="app-bg hidden"></div>
+
+    <div class="app-main">
+
+      <!-- 顶栏 -->
+      <header class="topbar">
+        <div class="topbar-brand">
+          <span class="brand-mark" id="brand-mark">F</span>
+          <span class="brand-name" id="brand-name">Fiscus</span>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" id="btn-theme" title="深色 / 浅色">◐</button>
+          <button class="icon-btn hidden" id="btn-logout" title="退出登录">⎋</button>
+        </div>
+      </header>
+
+      <!-- 概览条：本月待还 + 最近临期（还款提醒常驻第一屏） -->
+      <section class="summary-bar" id="summary-bar">
+        <div class="summary-main">
+          <span class="summary-label">本月待还</span>
+          <span class="summary-value" id="sum-total">--</span>
+        </div>
+        <div class="summary-side">
+          <div class="summary-line" id="sum-nearest">--</div>
+          <div class="summary-line sub" id="sum-cards">--</div>
+        </div>
+      </section>
+
+      <!-- ============ 卡包页 ============ -->
+      <section class="page" id="tab-cards">
+        <div class="page-toolbar">
+          <div class="seg" id="card-view-seg">
+            <button class="seg-btn active" data-view="list">列表</button>
+            <button class="seg-btn" data-view="wallet">卡包</button>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="btn-add-card">+ 添加卡片</button>
+        </div>
+
+        <!-- 列表视图 -->
+        <div id="card-list" class="card-list"></div>
+
+        <!-- 卡包视图（完整卡面层叠） -->
+        <div id="card-wallet" class="card-wallet hidden"></div>
+      </section>
+
+      <!-- ============ 待办页 ============ -->
+      <section class="page hidden" id="tab-todo">
+        <div class="date-strip" id="date-strip"></div>
+        <div id="todo-sections"></div>
+      </section>
+
+      <!-- ============ 设置页 ============ -->
+      <section class="page hidden" id="tab-settings">
+        <div class="settings-group">
+          <div class="settings-title">界面与品牌</div>
+          <div class="form-row"><label>应用名称</label><input class="input" id="set-app-name" maxlength="12"></div>
+          <div class="form-row">
+            <label>主题色</label>
+            <div class="color-row">
+              <div class="palette" id="set-palette"></div>
+              <input type="color" id="set-color" class="color-picker" value="#4F6EF7">
+            </div>
+          </div>
+          <div class="form-row">
+            <label>应用图标</label>
+            <div class="upload-row">
+              <span class="icon-preview" id="icon-preview">F</span>
+              <input type="file" id="set-icon" class="file-input" accept="image/png,image/jpeg,image/webp">
+              <button class="btn btn-ghost btn-sm" id="btn-clear-icon">恢复默认</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>背景图</label>
+            <div class="upload-row">
+              <select class="input" id="set-bg-select">
+                <option value="">关闭</option>
+                <option value="preset:aurora">预设 · 极光</option>
+                <option value="preset:candy">预设 · 糖果</option>
+                <option value="preset:sunset">预设 · 落日</option>
+                <option value="upload:">上传自定义…</option>
+              </select>
+              <input type="file" id="set-bg-file" class="file-input hidden" accept="image/png,image/jpeg,image/webp">
+            </div>
+          </div>
+          <div class="form-row"><label>遮罩浓度</label><input type="range" id="set-bg-mask" min="0" max="85" value="35"></div>
+          <button class="btn btn-primary" id="btn-save-brand">保存界面设置</button>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-title">邮箱提醒</div>
+          <div class="form-row switch-row">
+            <label>启用邮件提醒</label>
+            <button class="switch" id="set-notify-on" aria-pressed="false"><span class="knob"></span></button>
+          </div>
+          <div class="form-row"><label>收件邮箱</label><input class="input" id="set-notify-emails" placeholder="多个邮箱用逗号分隔"></div>
+          <div class="form-row"><label>提前提醒</label>
+            <div class="inline-inputs"><input type="number" class="input sm" id="set-lead" min="1" max="30" value="3"><span class="unit">天 · 每日</span>
+            <input type="number" class="input sm" id="set-hour" min="0" max="23" value="8"><span class="unit">点扫描</span></div>
+          </div>
+          <div class="form-row"><label>SMTP 服务器</label><input class="input" id="set-smtp-host" placeholder="smtp.qq.com"></div>
+          <div class="form-row"><label>端口</label>
+            <div class="inline-inputs">
+              <input type="number" class="input sm" id="set-smtp-port" value="465">
+              <label class="check"><input type="checkbox" id="set-smtp-ssl" checked> SSL</label>
+            </div>
+          </div>
+          <div class="form-row"><label>邮箱账号</label><input class="input" id="set-smtp-user" placeholder="you@example.com"></div>
+          <div class="form-row"><label>授权码</label><input type="password" class="input" id="set-smtp-pass" placeholder="SMTP 授权码（非登录密码）"></div>
+          <div class="help-link">不会获取授权码？<a href="/help/smtp" target="_blank">查看授权码教程</a></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-save-notify">保存并启用</button>
+            <button class="btn btn-ghost" id="btn-test-notify">发送测试邮件</button>
+          </div>
+          <div class="form-tip" id="notify-tip">标记已还的账单当期立即停止提醒。</div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-title">关于</div>
+          <div class="about-line">Fiscus <span id="about-version"></span> · 自部署信用卡卡包工作台</div>
+          <div class="about-line sub">数据全部保存在本地容器卷，不上传任何第三方。</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 底部 Tab（手机）/ 左侧栏（桌面） -->
+    <nav class="tabbar">
+      <button class="tab-item active" data-tab="cards">
+        <svg class="tab-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 9.5h19"/></svg>
+        <span class="tab-label">卡包</span>
+      </button>
+      <button class="tab-item" data-tab="todo">
+        <svg class="tab-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+        <span class="tab-label">待办</span>
+        <span class="tab-badge hidden" id="todo-badge">0</span>
+      </button>
+      <button class="tab-item" data-tab="settings">
+        <svg class="tab-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.5"/><circle cx="7" cy="17" r="2.5"/></svg>
+        <span class="tab-label">设置</span>
+      </button>
+    </nav>
+
+    <!-- ============ 聚焦详情（手机整页 / 桌面右抽屉） ============ -->
+    <div id="detail-mask" class="detail-mask hidden"></div>
+    <aside id="card-detail" class="card-detail hidden">
+      <div class="detail-head">
+        <button class="icon-btn" id="btn-detail-close">←</button>
+        <span class="detail-title" id="detail-title">卡片详情</span>
+        <button class="btn btn-ghost btn-sm" id="btn-detail-edit">编辑</button>
+      </div>
+      <div class="detail-body" id="detail-body"></div>
+    </aside>
+  </div>
+
+  <!-- ============ 卡片编辑弹窗 ============ -->
+  <div id="modal-mask" class="modal-mask hidden"></div>
+  <div id="card-modal" class="modal hidden">
+    <div class="modal-head"><span id="card-modal-title">添加卡片</span><button class="icon-btn" id="btn-card-modal-close">×</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>卡名</label><input class="input" id="f-name" maxlength="30" placeholder="如：招行白金卡"></div>
+      <div class="form-row"><label>银行</label><input class="input" id="f-bank" maxlength="30" placeholder="如：招商银行"></div>
+      <div class="form-row"><label>还款日</label><input type="number" class="input sm" id="f-repay" min="1" max="31" value="5"><span class="unit">每月几号</span></div>
+      <div class="form-row"><label>账单日</label><input type="number" class="input sm" id="f-bill" min="0" max="31" value="0"><span class="unit">可不填</span></div>
+      <div class="form-row"><label>额度</label><input type="number" class="input sm" id="f-limit" min="0" placeholder="选填"><span class="unit">元</span></div>
+      <div class="form-row">
+        <label>卡面色</label>
+        <div class="color-row"><div class="palette" id="f-palette"></div><input type="color" id="f-color" class="color-picker" value="#4F6EF7"></div>
+      </div>
+      <div class="form-row">
+        <label>卡面图</label>
+        <div class="upload-row">
+          <span class="icon-preview" id="f-image-preview"></span>
+          <input type="file" id="f-image" class="file-input" accept="image/png,image/jpeg,image/webp">
+          <button class="btn btn-ghost btn-sm hidden" id="btn-f-image-clear">移除</button>
+        </div>
+      </div>
+      <div class="form-row"><label>备注</label><input class="input" id="f-notes" maxlength="200" placeholder="尾号、卡种等，选填"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger hidden" id="btn-card-delete">删除卡片</button>
+      <button class="btn btn-primary" id="btn-card-save">保存</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/assets/app.js?v=1.0.0"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Fiscus Docker Compose 部署文件
+#
+# 用法：cp .env.example .env 并修改 AUTH_PASSWORD，然后 docker compose up -d
+#
+# user: "0:0" 为推荐配置，请勿删除：容器以 root 启动后，
+# 入口脚本自动修复 /data 属主并降权为普通用户运行服务进程。
+
+services:
+  fiscus:
+    image: ghcr.io/sinailurus/fiscus:latest            # CI 自动构建的 GHCR 镜像
+    user: "0:0"                                          # 修权限必需，勿删（服务进程自动降权运行）
+    # build: .                                          # ← 本地构建时启用
+    container_name: fiscus
+    restart: unless-stopped
+    ports:
+      - "${FISCUS_PORT:-8310}:8000"
+    environment:
+      - TZ=${TZ:-Asia/Shanghai}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
+      - DATA_DIR=/data
+    volumes:
+      - ${FISCUS_DATA:-./data}:/data
