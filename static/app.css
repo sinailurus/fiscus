@@ -663,11 +663,11 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   .modal { position: fixed; inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: 420px; max-width: calc(100vw - 32px); border-radius: 18px; }
   .modal-foot { padding: 0 0 calc(2px + env(safe-area-inset-bottom)); }
 }
-/* 小型确认弹窗（照抄 SubDeck modal-confirm）：居中卡片，不再底部上弹 */
+/* 小型确认弹窗（照抄 SubDeck modal-confirm）：本体不碰定位，全断点由 mask 的 flex align-items:center 居中；
+   不可写 inset/transform——手机 UA 下 .modal 是 relative，inset 会变成文档流偏移把弹窗悬在页面中部 */
 .modal-mask.modal-confirm-mask { align-items: center; padding: 0 16px; }
 .modal.modal-confirm {
   max-width: 320px; width: auto; border-radius: 18px;
-  inset: 50% auto auto 50%; transform: translate(-50%, -50%);
   padding: 18px 16px 16px;
 }
 .modal.modal-confirm .modal-foot { justify-content: flex-end; margin-top: 12px; }

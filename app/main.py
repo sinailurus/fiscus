@@ -10,6 +10,7 @@ import json
 import os
 import re
 import time
+from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -1065,4 +1066,7 @@ def smtp_help():
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return FileResponse(os.path.join(STATIC_DIR, "index.html"), media_type="text/html")
+    # 版本戳注入（照抄 SubDeck v1.6.13）：HTML 里写死的 ?v= 会被替换为当前 APP_VERSION，
+    # 前端资源更新必须换戳，否则浏览器缓存让更新假性失效
+    html = Path(os.path.join(STATIC_DIR, "index.html")).read_text(encoding="utf-8")
+    return HTMLResponse(content=html.replace("?v=", f"?v={APP_VERSION}"), headers={"Cache-Control": "no-cache"})

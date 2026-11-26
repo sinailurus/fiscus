@@ -1028,8 +1028,15 @@ $("#btn-bank-name-save")?.addEventListener("click", async () => {
 });
 
 /* ---------------------------------------------------------------- 设置页 */
-/* 背景图编辑器状态：null=未改动（保存时不动 bg_image）；''=关闭；'preset:x'=预设（照 SubDeck 交互，选中后仍走保存按钮提交） */
-let pendingBgImage = null;
+/* 外观即改即存（照抄 SubDeck saveAppearance）：改一项立刻持久化并应用，多端下次打开自动一致 */
+async function saveAppearance(patch, msg) {
+  try {
+    state.settings = await api("/api/settings", { method: "PUT", body: patch });
+    applyBrand();
+    fillSettings();
+    if (msg) toast(msg);
+  } catch (ex) { if (ex.message !== "unauthorized") toast("保存失败：" + ex.message); }
+}
 function bgPreviewUrl(val) {
   if (!val) return "";
   return val.startsWith("preset:") ? `/assets/bg/${val.slice(7)}.jpg` : `/api/brand/background?v=${Date.now() % 1e7}`;
@@ -1047,9 +1054,7 @@ function fillSettings() {
   $("#set-app-name").value = s.app_name || "";
   $("#set-color-hex").value = (s.theme_color || "").toUpperCase();
   renderPalette($("#set-palette"), s.theme_color || "");
-  bindColorHex($("#set-color-hex"), $("#set-palette"));
   $("#icon-preview").innerHTML = s.brand_icon ? `<img src="/api/brand/icon?v=${Date.now() % 1e7}">` : "F";
-  pendingBgImage = null;
   syncBgEditor(s.bg_image || "");
   $("#set-bg-mask").value = s.bg_mask ?? 35;
   $("#set-bg-mask-value").textContent = `${s.bg_mask ?? 35}%`;
@@ -1073,19 +1078,20 @@ function fillSettings() {
   $("#set-smtp-pass").value = s.smtp_pass || "";
   $("#about-version").textContent = `v${state.me?.version || ""}`;
 }
+/* 外观面板即改即存事件（背景预设/关闭/遮罩/主题色/应用名/界面风格/登录页文案） */
 $("#bg-presets")?.addEventListener("click", (e) => {
   const b = e.target.closest(".preset-swatch");
   if (!b) return;
-  pendingBgImage = b.dataset.preset;
-  syncBgEditor(pendingBgImage);
+  saveAppearance({ bg_image: b.dataset.preset }, "背景图已更新");
 });
-$("#btn-bg-clear")?.addEventListener("click", () => {
-  pendingBgImage = "";
-  syncBgEditor("");
-});
+$("#btn-bg-clear")?.addEventListener("click", () => saveAppearance({ bg_image: "" }, "背景图已关闭"));
 $("#set-bg-mask")?.addEventListener("input", () => {
-  $("#set-bg-mask-value").textContent = `${$("#set-bg-mask").value}%`;
+  /* 拖动过程只做本地预览，松手（change）才落库 */
+  const v = +$("#set-bg-mask").value;
+  $("#set-bg-mask-value").textContent = `${v}%`;
+  $("#app-bg")?.style.setProperty("--app-mask", `${v / 100}`);
 });
+$("#set-bg-mask")?.addEventListener("change", () => saveAppearance({ bg_mask: +$("#set-bg-mask").value }, "遮罩浓度已保存"));
 $("#set-bg-file")?.addEventListener("change", async () => {
   const f = $("#set-bg-file").files[0];
   if (!f) return;
@@ -1094,53 +1100,63 @@ $("#set-bg-file")?.addEventListener("change", async () => {
     fd.append("file", f);
     await api("/api/brand/background", { method: "POST", body: fd });
     state.settings = await api("/api/settings");
-    pendingBgImage = null;
     fillSettings();
     applyBrand();
     toast("自定义背景已上传并生效");
   } catch (ex) { toast(ex.message); }
 });
+$("#set-palette")?.addEventListener("click", (e) => {
+  const sw = e.target.closest(".theme-swatch");
+  if (!sw) return;
+  const v = sw.dataset.c.toUpperCase();
+  $("#set-color-hex").value = v;
+  renderPalette($("#set-palette"), v);
+  saveAppearance({ theme_color: v }, "主题色已更新");
+});
+$("#set-color-hex")?.addEventListener("change", () => {
+  const v = $("#set-color-hex").value.trim().toUpperCase();
+  if (!HEX_RE.test(v)) { toast("色号格式应为 #RRGGBB"); renderPalette($("#set-palette"), state.settings?.theme_color || ""); $("#set-color-hex").value = (state.settings?.theme_color || "").toUpperCase(); return; }
+  saveAppearance({ theme_color: v }, "主题色已更新");
+});
+$("#btn-set-color-reset")?.addEventListener("click", () => saveAppearance({ theme_color: "" }, "已恢复默认主题色"));
+$("#set-app-name")?.addEventListener("change", () => {
+  const v = $("#set-app-name").value.trim();
+  if (v.length > 12) { toast("应用名称不超过 12 字"); fillSettings(); return; }
+  saveAppearance({ app_name: v }, "应用名称已保存");
+});
+document.querySelectorAll('input[name="set-skin"]').forEach((r) => r.addEventListener("change", () => {
+  saveAppearance({ skin: r.value }, "界面风格已保存");
+}));
+$("#set-login-title")?.addEventListener("change", () => saveAppearance({ login_title: $("#set-login-title").value.trim() }, "登录页标题已保存"));
+$("#btn-login-title-reset")?.addEventListener("click", () => saveAppearance({ login_title: "" }, "已恢复默认"));
+$("#set-login-welcome")?.addEventListener("change", () => saveAppearance({ login_welcome: $("#set-login-welcome").value.trim() }, "登录页欢迎语已保存"));
+$("#set-loginbg-mask")?.addEventListener("change", () => saveAppearance({ login_bg_mask: +$("#set-loginbg-mask").value }, "已保存"));
+$("#set-icon")?.addEventListener("change", async () => {
+  const f = $("#set-icon").files[0];
+  if (!f) return;
+  try {
+    const fd = new FormData();
+    fd.append("file", f);
+    await api("/api/brand/icon", { method: "POST", body: fd });
+    state.settings = await api("/api/settings");
+    fillSettings();
+    applyBrand();
+    toast("图标已上传并生效");
+  } catch (ex) { toast(ex.message); }
+});
 $("#set-loginbg-select")?.addEventListener("change", () => {
   $("#set-loginbg-btn").classList.toggle("hidden", $("#set-loginbg-select").value !== "upload:");
 });
-$("#set-loginbg-file")?.addEventListener("change", () => {
+$("#set-loginbg-file")?.addEventListener("change", async () => {
   const f = $("#set-loginbg-file").files[0];
-  $("#set-loginbg-name").textContent = f ? f.name : "未选择";
-});
-$("#btn-login-title-reset")?.addEventListener("click", () => { $("#set-login-title").value = ""; });
-$("#set-icon")?.addEventListener("change", () => {
-  const f = $("#set-icon").files[0];
-  $("#set-icon-name").textContent = f ? f.name : "未选择";
-});
-$("#btn-save-brand")?.addEventListener("click", async () => {
+  if (!f) return;
   try {
-    const body = {
-      app_name: $("#set-app-name").value.trim(),
-      theme_color: readHex($("#set-color-hex"), ""),
-      bg_mask: +$("#set-bg-mask").value,
-      skin: document.querySelector('input[name="set-skin"]:checked')?.value || "glass",
-      login_title: $("#set-login-title").value.trim(),
-      login_welcome: $("#set-login-welcome").value.trim(),
-      login_bg_mask: +$("#set-loginbg-mask").value,
-    };
-    if (pendingBgImage !== null) body.bg_image = pendingBgImage;
-    const lsel = $("#set-loginbg-select").value;
-    if (lsel !== "upload:") body.login_bg = lsel;
-    await api("/api/settings", { method: "PUT", body });
-    if ($("#set-icon").files[0]) {
-      const fd = new FormData();
-      fd.append("file", $("#set-icon").files[0]);
-      await api("/api/brand/icon", { method: "POST", body: fd });
-    }
-    if ($("#set-loginbg-file").files[0] && lsel === "upload:") {
-      const fd = new FormData();
-      fd.append("file", $("#set-loginbg-file").files[0]);
-      await api("/api/brand/login-background", { method: "POST", body: fd });
-    }
+    const fd = new FormData();
+    fd.append("file", f);
+    await api("/api/brand/login-background", { method: "POST", body: fd });
     state.settings = await api("/api/settings");
-    applyBrand();
     fillSettings();
-    toast("界面设置已保存");
+    toast("登录页背景已上传并生效");
   } catch (ex) { toast(ex.message); }
 });
 $("#btn-clear-icon")?.addEventListener("click", async () => {
