@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from . import auth, mailer, reminders
 from .db import MEDIA_DIR, db, get_setting, init_db, set_setting
 
-APP_VERSION = "1.1.0-beta.5"
+APP_VERSION = "1.1.0-beta.6"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 
 CARD_IMAGE_RE = re.compile(r"^card_\d+\.(png|jpg|webp)$")
@@ -379,6 +379,10 @@ def _validate_card(body: dict, partial: bool = False) -> dict:
         out["limit"] = limit
     if "notes" in body or not partial:
         out["notes"] = str(body.get("notes") or "")[:500]
+    if "network" in body or not partial:
+        out["network"] = str(body.get("network") or "")[:20]
+    if "level" in body or not partial:
+        out["level"] = str(body.get("level") or "")[:20]
     if "report_combined" in body or not partial:
         out["report_combined"] = 1 if body.get("report_combined") else 0
     return out
@@ -416,11 +420,12 @@ def create_card(request: Request, body: dict):
         max_sort = conn.execute("SELECT COALESCE(MAX(sort_order),0) m FROM cards").fetchone()["m"]
         cur = conn.execute(
             """INSERT INTO cards (name, bank, color, bill_day, repay_day, lead_days,
-               limit_amount, notes, sort_order, report_combined, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+               limit_amount, notes, sort_order, report_combined, network, level, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (data["name"], data.get("bank", ""), data.get("color", ""), data.get("bill_day", 0),
              data["repay_day"], data.get("lead_days", 0), data.get("limit", 0),
-             data.get("notes", ""), max_sort + 1, data.get("report_combined", 0), now, now))
+             data.get("notes", ""), max_sort + 1, data.get("report_combined", 0),
+             data.get("network", ""), data.get("level", ""), now, now))
         return _card_payload(conn, cur.lastrowid)
 
 
@@ -966,6 +971,62 @@ def get_login_background(request: Request):
     if not filename or filename in ("", "none") or filename.startswith("preset:"):
         raise HTTPException(status_code=404, detail="未设置登录页背景")
     return _media_file_response(filename, "private, max-age=600")
+
+
+# ---------------------------------------------------------------- 数据备份（照抄 SubDeck 逻辑）
+
+@app.get("/api/export")
+def export_backup(request: Request, sensitive: int = 0):
+    """导出备份包 zip。sensitive=1 时保留 SMTP 授权码等敏感设置（默认剔除）。"""
+    require_auth(request)
+    from . import backup
+    data = backup.export_bytes(sensitive=bool(sensitive))
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M")
+    filename = f"fiscus-backup-{stamp}.zip"
+    return Response(
+        data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.get("/api/import-status")
+def import_status(request: Request):
+    """回滚可用性查询（前端据此显隐"回滚上次导入"按钮）。"""
+    require_auth(request)
+    from . import backup
+    return {"has_rollback": backup.has_rollback()}
+
+
+@app.post("/api/import")
+async def import_backup(request: Request):
+    """覆盖式导入备份包 zip；导入前自动留档，可一键回滚到导入前。"""
+    require_auth(request)
+    from . import backup
+    try:
+        form = await request.form()
+        upload = form.get("file")
+        if upload is None or isinstance(upload, str):
+            raise ValueError("缺少上传文件（字段名 file）")
+        data = await upload.read()
+        if not data:
+            raise ValueError("上传文件为空")
+        if len(data) > 64 * 1024 * 1024:
+            raise ValueError("备份包超过 64MB 上限，请检查是否选错文件")
+        return backup.import_zip_bytes(data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/import/rollback")
+def rollback_import(request: Request):
+    """一键回滚到最近一次导入前的状态（回滚后存档作废）。"""
+    require_auth(request)
+    from . import backup
+    try:
+        return backup.rollback()
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 # ---------------------------------------------------------------- 静态资源与入口

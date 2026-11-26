@@ -138,7 +138,7 @@ function dueBadge(days, paid, urgentDays) {
   return `<span class="badge badge-blue">${days} 天后</span>`;
 }
 function amountText(c) {
-  return c.bill_amount === null ? "未录金额" : `¥${fmtMoney(c.bill_amount)}`;
+  return c.bill_amount === null ? "¥ --" : `¥${fmtMoney(c.bill_amount)}`;
 }
 
 /* ---------------------------------------------------------------- 卡包页 */
@@ -192,6 +192,7 @@ function walletFaceHTML(c, urgent, plain = false) {
       </div>
     </div>`;
 }
+
 function renderCardWallet(cards, urgent) {
   const box = $("#card-wallet");
   if (!cards.length) { box.innerHTML = ""; return; }
@@ -204,6 +205,14 @@ function renderCardWallet(cards, urgent) {
       <div class="wallet-open">
         ${walletFaceHTML(openCard, urgent, true)}
         <div class="wallet-info-panel">
+          <div class="wip-bill" style="--bill-c:${esc(openCard.color)}">
+            <span class="wip-bill-label">本期账单</span>
+            <span class="wip-bill-amount ${openCard.bill_amount === null ? "empty" : openCard.bill_paid ? "paid" : ""}">${
+              openCard.bill_paid ? "已还清"
+              : openCard.bill_amount === null ? "--"
+              : `¥${fmtMoney(openCard.bill_amount)}`
+            }</span>
+          </div>
           <div class="wip-grid">
             <div class="wip-item"><span class="wip-k">卡名</span><span class="wip-v">${esc(openCard.name)}</span></div>
             <div class="wip-item"><span class="wip-k">银行</span><span class="wip-v">${esc(bankDisplay(openCard.bank) || "—")}</span></div>
@@ -220,7 +229,7 @@ function renderCardWallet(cards, urgent) {
       </div>
       ${rest.map((c) => `
         <div class="wallet-card wallet-card-mini" data-id="${c.id}">
-          ${walletFaceHTML(c, urgent)}
+          ${walletFaceHTML(c, urgent, true)}
         </div>`).join("")}
       <div class="wallet-hint">点折叠卡面或空白处恢复完整视图</div>`;
     $("#btn-wallet-edit", box)?.addEventListener("click", () => openCardModal(openCard.id));
@@ -255,7 +264,7 @@ function renderCardWallet(cards, urgent) {
   box.onclick = null;              /* 清掉展开态遗留的空白收起监听，防冒泡误触 */
   box.innerHTML = cards.map((c) => `
     <div class="wallet-card" data-id="${c.id}">
-      ${walletFaceHTML(c, urgent)}
+      ${walletFaceHTML(c, urgent, true)}
     </div>`).join("") + `<div class="wallet-hint">点卡片展开详情 · 临期的卡完整置顶</div>`;
   $$(".wallet-card", box).forEach((el) =>
     el.addEventListener("click", (ev) => {
@@ -336,6 +345,8 @@ function detailHtml(c, urgent) {
       <span class="info-value">${c.bill_day ? `每月 ${c.bill_day} 号` : "未设置"}</span></div>
     <div class="info-row"><span class="info-label">备注</span>
       <span class="info-value">${esc(c.notes || "--")}</span></div>
+    ${(c.network || c.level) ? `<div class="info-row"><span class="info-label">卡片</span>
+      <span class="info-value">${c.network ? `<span class="badge badge-blue tag">${esc(c.network)}</span>` : ""}${c.level ? ` <span class="badge badge-deep tag">${esc(c.level)}</span>` : ""}</span></div>` : ""}
     <div class="mini-form" style="margin-top:8px">
       <input type="number" class="input" id="bill-input" min="0" step="0.01" placeholder="录入本期应还金额">
       <button class="btn btn-primary btn-sm" id="bill-save">保存金额</button>
@@ -746,6 +757,8 @@ function openCardModal(id = null) {
   $("#f-repay").value = c?.repay_day || 5;
   $("#f-bill").value = c?.bill_day || 0;
   $("#f-limit").value = c?.limit_amount || "";
+  $("#f-network").value = c?.network || "";
+  $("#f-level").value = c?.level || "";
   $("#f-notes").value = c?.notes || "";
   $("#f-color-hex").value = (c?.color || PALETTE[2]).toUpperCase();
   renderPalette($("#f-palette"), $("#f-color-hex").value);
@@ -820,6 +833,7 @@ $("#btn-card-save")?.addEventListener("click", async () => {
     name, bank: $("#f-bank").value.trim(),
     repay_day: +($("#f-repay").value || 5), bill_day: +($("#f-bill").value || 0),
     limit: +($("#f-limit").value || 0), notes: $("#f-notes").value.trim(),
+    network: $("#f-network").value.trim(), level: $("#f-level").value.trim(),
     color: readHex($("#f-color-hex"), PALETTE[2]),
   };
   let cardId = state.editId;
@@ -1086,4 +1100,84 @@ $$(".tab-item").forEach((el) =>
   renderSummary();
   renderCards();
   renderTodo();
+})();
+
+/* ---------------------------------------------------------------- 数据备份：导出 / 导入 / 回滚（照抄 SubDeck v1.6.11 逻辑） */
+(function () {
+  const mask = $("#export-mask");
+  const btnExport = $("#btn-export");
+  if (!btnExport || !mask) return;
+  const btnRollback = $("#btn-rollback");
+  const note = $("#backup-note");
+
+  /* 回滚按钮显隐：有存档才显示 */
+  api("/api/import-status").then((r) => {
+    if (r.has_rollback) btnRollback.classList.remove("hidden");
+  }).catch(() => {});
+
+  /* 导出：弹选项 → 下载 → 按是否含敏感给出对应提醒 */
+  btnExport.addEventListener("click", () => mask.classList.remove("hidden"));
+  const closeMask = () => mask.classList.add("hidden");
+  $("#btn-export-cancel")?.addEventListener("click", closeMask);
+  $("#btn-export-cancel2")?.addEventListener("click", closeMask);
+  mask.addEventListener("click", (e) => { if (e.target === mask) closeMask(); });
+  $("#btn-export-go").addEventListener("click", async () => {
+    const sensitive = $("#export-sensitive").checked ? 1 : 0;
+    closeMask();
+    try {
+      const resp = await fetch(`/api/export?sensitive=${sensitive}`, { credentials: "same-origin" });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const blob = await resp.blob();
+      const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `fiscus-backup-${stamp}.zip`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      toast(sensitive
+        ? "导出成功：文件含授权码等隐私敏感信息，请妥善保管"
+        : "导出成功：已剔除敏感信息");
+    } catch { toast("导出失败，请重试"); }
+  });
+
+  /* 导入：选文件 → 确认覆盖 → 上传 → 全量刷新 */
+  const fileInput = $("#import-file");
+  $("#btn-import")?.addEventListener("click", () => fileInput.click());
+  fileInput?.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    fileInput.value = "";
+    if (!file) return;
+    if (!confirm("导入将覆盖当前全部卡片、账单与设置（图片以备份包为准）。\n导入前会自动留档，可一键回滚到导入前。\n\n确定导入 " + file.name + " ？")) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const r = await fetch("/api/import", { method: "POST", body: fd, credentials: "same-origin" });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.detail || "HTTP " + r.status);
+      toast(j.sensitive
+        ? "导入成功（备份包含敏感信息）"
+        : "导入成功（备份包不含敏感信息，相关设置保留本地现状）");
+      state.settings = await api("/api/settings");
+      await refreshOverview();
+      applyBrand(); fillSettings();
+      btnRollback.classList.remove("hidden");
+      note.textContent = "上次导入：" + (j.exported_at || "").slice(0, 10) + " 的备份包 · 卡片 " + (j.cards || 0) + " 张 · 图片 " + j.assets + " 张";
+    } catch (e) { toast("导入失败：" + e.message); }
+  });
+
+  /* 回滚：恢复到最近一次导入前 */
+  btnRollback?.addEventListener("click", async () => {
+    if (!confirm("回滚将恢复到最近一次导入前的状态（回滚后存档作废）。确定？")) return;
+    try {
+      const r = await fetch("/api/import/rollback", { method: "POST", credentials: "same-origin" });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.detail || "HTTP " + r.status);
+      toast("已回滚到导入前");
+      state.settings = await api("/api/settings");
+      await refreshOverview();
+      applyBrand(); fillSettings();
+      btnRollback.classList.add("hidden");
+      note.textContent = "";
+    } catch (e) { toast("回滚失败：" + e.message); }
+  });
 })();

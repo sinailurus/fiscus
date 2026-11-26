@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.5">
+  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.6">
   <title>Fiscus</title>
 </head>
 <body>
@@ -140,6 +140,18 @@
         </div>
 
         <div class="settings-group">
+          <div class="settings-title">数据备份</div>
+          <div class="form-hint" style="margin-bottom:8px;">导出卡片、账单、年费、权益与全部设置的备份包，或从备份包还原。导入为覆盖式：导入前自动留档，可一键回滚到导入前。</div>
+          <div class="btn-row">
+            <button class="btn" id="btn-export">导出备份包</button>
+            <button class="btn" id="btn-import">导入备份包</button>
+            <button class="btn btn-ghost hidden" id="btn-rollback">回滚上次导入</button>
+          </div>
+          <input type="file" id="import-file" accept=".zip,application/zip" class="hidden">
+          <div class="form-hint" id="backup-note" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="settings-group">
           <div class="settings-title">邮箱提醒</div>
           <div class="form-row switch-row">
             <label>启用邮件提醒</label>
@@ -213,6 +225,8 @@
       <div class="form-row"><label>银行</label><input class="input" id="f-bank" maxlength="30" placeholder="如：招商银行"></div>
       <div class="form-row"><label>还款日</label><input type="number" class="input sm" id="f-repay" min="1" max="31" value="5"><span class="unit">每月几号</span></div>
       <div class="form-row"><label>账单日</label><input type="number" class="input sm" id="f-bill" min="0" max="31" value="0"><span class="unit">可不填</span></div>
+      <div class="form-row"><label>卡组织</label><input class="input" id="f-network" maxlength="20" list="network-list" placeholder="选填，如 银联 / Visa"><datalist id="network-list"><option value="银联"></option><option value="Visa"></option><option value="Mastercard"></option><option value="美国运通"></option><option value="JCB"></option><option value="发现卡"></option><option value="大来卡"></option></datalist></div>
+      <div class="form-row"><label>等级</label><input class="input" id="f-level" maxlength="20" list="level-list" placeholder="选填，如 白金卡"><datalist id="level-list"><option value="普卡"></option><option value="金卡"></option><option value="白金卡"></option><option value="黑金卡"></option><option value="钻石卡"></option><option value="学生卡"></option><option value="商务卡"></option></datalist></div>
       <div class="form-row"><label>额度</label><input type="number" class="input sm" id="f-limit" min="0" placeholder="选填"><span class="unit">元</span></div>
       <div class="form-row form-row-stack">
         <label>卡片主题色</label>
@@ -248,6 +262,23 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="/assets/app.js?v=1.1.0-beta.5"></script>
+
+  <!-- 导出备份包选项弹窗（照 SubDeck）：敏感信息勾选 -->
+  <div id="export-mask" class="modal-mask hidden">
+    <div class="modal">
+      <div class="modal-head"><span>导出备份包</span><button class="icon-btn" id="btn-export-cancel">×</button></div>
+      <div class="modal-body">
+        <div class="form-hint">备份包含全部卡片、账单、年费、权益与设置。是否包含敏感信息（如 SMTP 授权码）？包含后在新环境导入即可直接使用。</div>
+        <label class="check" style="display:flex; align-items:center; gap:8px; margin-top:10px; cursor:pointer;">
+          <input type="checkbox" id="export-sensitive"> 包含敏感信息（SMTP 授权码等）
+        </label>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" id="btn-export-cancel2">取消</button>
+        <button type="button" class="btn" id="btn-export-go">导出</button>
+      </div>
+    </div>
+  </div>
+  <script src="/assets/app.js?v=1.1.0-beta.6"></script>
 </body>
 </html>
