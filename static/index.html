@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.7">
+  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.8">
   <title>Fiscus</title>
 </head>
 <body>
@@ -84,7 +84,15 @@
 
       <!-- ============ 设置页 ============ -->
       <section class="page hidden" id="tab-settings">
-        <div class="settings-group">
+        <nav class="settings-nav" id="settings-nav">
+          <a href="#sett-appearance">界面与品牌</a>
+          <a href="#sett-banknames">银行显示名</a>
+          <a href="#sett-backup">数据备份</a>
+          <a href="#sett-notify">邮箱提醒</a>
+          <a href="#sett-about">关于</a>
+        </nav>
+        <div class="settings-flow">
+        <div class="settings-group" id="sett-appearance">
           <div class="settings-title">界面与品牌</div>
           <div class="form-row"><label>应用名称</label><input class="input" id="set-app-name" maxlength="12"></div>
           <div class="form-row form-row-stack">
@@ -99,7 +107,12 @@
             <label>应用图标</label>
             <div class="upload-row">
               <span class="icon-preview" id="icon-preview">F</span>
-              <input type="file" id="set-icon" class="file-input" accept="image/png,image/jpeg,image/webp">
+              <label class="btn btn-sm file-btn">
+                <svg viewBox="0 0 24 24" width="15" height="15"><path d="M12 16V4m0 0 4 4m-4-4L8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                上传图标
+                <input type="file" id="set-icon" accept="image/png,image/jpeg,image/webp" hidden>
+              </label>
+              <span class="file-name" id="set-icon-name">未选择</span>
               <button class="btn btn-ghost btn-sm" id="btn-clear-icon">恢复默认</button>
             </div>
           </div>
@@ -122,14 +135,18 @@
                 <option value="preset:sunset">预设 · 落日</option>
                 <option value="upload:">上传自定义…</option>
               </select>
-              <input type="file" id="set-bg-file" class="file-input hidden" accept="image/png,image/jpeg,image/webp">
+              <label class="btn btn-sm file-btn hidden" id="set-bg-file-btn">
+                <svg viewBox="0 0 24 24" width="15" height="15"><path d="M12 16V4m0 0 4 4m-4-4L8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                上传背景图
+                <input type="file" id="set-bg-file" accept="image/png,image/jpeg,image/webp" hidden>
+              </label>
             </div>
           </div>
           <div class="form-row"><label>遮罩浓度</label><input type="range" id="set-bg-mask" min="0" max="85" value="35"></div>
           <button class="btn btn-primary" id="btn-save-brand">保存界面设置</button>
         </div>
 
-        <div class="settings-group">
+        <div class="settings-group" id="sett-banknames">
           <div class="settings-title">银行显示名</div>
           <div id="bank-name-rows"></div>
           <div class="btn-row">
@@ -139,7 +156,7 @@
           <div class="form-tip">卡片仍按完整银行名归属分组，显示名只改变邮件组头与列表里的展示文字（全称简称都行）。</div>
         </div>
 
-        <div class="settings-group">
+        <div class="settings-group" id="sett-backup">
           <div class="settings-title">数据备份</div>
           <div class="form-hint" style="margin-bottom:8px;">导出卡片、账单、年费、权益与全部设置的备份包，或从备份包还原。导入为覆盖式：导入前自动留档，可一键回滚到导入前。</div>
           <div class="btn-row">
@@ -151,7 +168,7 @@
           <div class="form-hint" id="backup-note" style="margin-top:8px;"></div>
         </div>
 
-        <div class="settings-group">
+        <div class="settings-group" id="sett-notify">
           <div class="settings-title">邮箱提醒</div>
           <div class="form-row switch-row">
             <label>启用邮件提醒</label>
@@ -179,10 +196,11 @@
           <div class="form-tip" id="notify-tip">标记已还的账单当期立即停止提醒。</div>
         </div>
 
-        <div class="settings-group">
+        <div class="settings-group" id="sett-about">
           <div class="settings-title">关于</div>
           <div class="about-line">Fiscus <span id="about-version"></span> · 自部署信用卡卡包工作台</div>
           <div class="about-line sub">数据全部保存在本地容器卷，不上传任何第三方。</div>
+        </div>
         </div>
       </section>
     </div>
@@ -289,6 +307,6 @@
       </div>
     </div>
   </div>
-  <script src="/assets/app.js?v=1.1.0-beta.7"></script>
+  <script src="/assets/app.js?v=1.1.0-beta.8"></script>
 </body>
 </html>

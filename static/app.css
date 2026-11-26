@@ -92,15 +92,50 @@ a { color: var(--accent); text-decoration: none; }
 .radio-pill input:checked + span { border-color: var(--accent); background: var(--accent-weak); color: var(--accent); font-weight: 600; }
 .hex-input { width: 110px; flex: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: .5px; }
 .color-row { display: flex; align-items: center; gap: 12px; }
-.palette { display: flex; gap: 8px; flex-wrap: wrap; }
+/* 表单统一竖排（SubDeck 设计语言）：label 在上，控件与说明在下，左对齐 */
+.form-row, .form-row-stack {
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+}
+.form-row > label, .form-row-stack > label { width: auto; font-size: 12.5px; font-weight: 600; }
+.form-row > .form-hint, .form-row-stack > .form-hint { text-align: left; }
+.palette { display: grid; grid-template-columns: repeat(5, 30px); gap: 10px; justify-content: start; }
 .palette .swatch {
   width: 30px; height: 30px; border-radius: 10px; cursor: pointer;
   border: none; padding: 0; appearance: none; -webkit-appearance: none;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .palette .swatch.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--text); }
-.form-row-stack { flex-direction: column; align-items: stretch; gap: 5px; }
-.form-row-stack > label { width: auto; }
+.upload-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.file-btn { cursor: pointer; }
+.file-btn input { display: none; }
+.file-name { font-size: 12px; color: var(--text-3, #98a2b3); max-width: 140px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- 设置页桌面适配（照抄 SubDeck）：≥1024 左 sticky 导航 + 右内容 ---- */
+.settings-nav { display: none; }
+@media (min-width: 1024px) {
+  #tab-settings {
+    display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 26px;
+    align-items: start; max-width: 1160px; margin-inline: auto;
+  }
+  .settings-nav {
+    display: block; position: sticky; top: 84px; font-size: 13.5px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 8px;
+  }
+  .settings-nav a {
+    display: block; position: relative; padding: 7px 12px; margin: 1px 0;
+    color: var(--text-2); text-decoration: none; border-radius: 8px;
+    transition: color .15s, background .15s;
+  }
+  .settings-nav a:hover { color: var(--text); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  .settings-nav a.on {
+    color: var(--accent); font-weight: 600;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .settings-flow { min-width: 0; }
+}
 .color-input-row { display: flex; gap: 8px; align-items: center; }
 .color-input-row .input {
   flex: 1; min-width: 0; padding: 9px 12px; font-size: 14px;
@@ -494,12 +529,8 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow);
 }
 .settings-title { font-weight: 600; margin-bottom: 12px; }
-.form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
-.form-row > label { width: 84px; flex: none; font-size: 13px; color: var(--text-2); }
-.form-row > .input, .form-row > .upload-row, .form-row > .inline-inputs, .form-row > .color-row { flex: 1; min-width: 0; }
 .form-row > .form-hint { flex-basis: 100%; }   /* 提示文字独占一行，不挤压上传控件 */
 .upload-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.upload-row .file-input { min-width: 0; flex: 1 1 150px; max-width: 100%; }
 .icon-preview {
   width: 40px; height: 40px; border-radius: 12px; flex: none; overflow: hidden;
   background: var(--accent-weak); color: var(--accent); font-weight: 600;

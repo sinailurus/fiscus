@@ -996,7 +996,11 @@ function fillSettings() {
   $("#about-version").textContent = `v${state.me?.version || ""}`;
 }
 $("#set-bg-select")?.addEventListener("change", () => {
-  $("#set-bg-file").classList.toggle("hidden", $("#set-bg-select").value !== "upload:");
+  $("#set-bg-file-btn").classList.toggle("hidden", $("#set-bg-select").value !== "upload:");
+});
+$("#set-icon")?.addEventListener("change", () => {
+  const f = $("#set-icon").files[0];
+  $("#set-icon-name").textContent = f ? f.name : "未选择";
 });
 $("#btn-save-brand")?.addEventListener("click", async () => {
   try {
@@ -1185,4 +1189,32 @@ function updateBackupRollback() {
       note.textContent = "";
     } catch (e) { toast("回滚失败：" + e.message); }
   });
+})();
+
+/* ---------------------------------------------------------------- 设置页左导航：点击平滑滚动 + 滚动高亮联动（照抄 SubDeck v1.6.9，仅 ≥1024 显示） */
+(function () {
+  const nav = $("#settings-nav");
+  if (!nav) return;
+  nav.addEventListener("click", (e) => {
+    const a = e.target.closest("a");
+    if (!a) return;
+    e.preventDefault();
+    history.replaceState(null, "", a.getAttribute("href"));
+    const target = document.querySelector(a.getAttribute("href"));
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  const links = [...nav.querySelectorAll("a")];
+  const groups = links.map((a) => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+  let ticking = false;
+  function highlight() {
+    ticking = false;
+    let cur = -1;
+    const ref = 96;   /* sticky 顶栏高度余量 */
+    groups.forEach((g, i) => { if (g.getBoundingClientRect().top <= ref + 8) cur = i; });
+    links.forEach((a, i) => a.classList.toggle("on", i === cur));
+  }
+  document.addEventListener("scroll", () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(highlight); }
+  }, { passive: true });
+  highlight();
 })();
