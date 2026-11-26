@@ -646,6 +646,119 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .about-line a { color: var(--accent); text-decoration: none; }
 .about-line a:hover { text-decoration: underline; }
 
+/* ============ 账单页（1.2.0：跨卡月度总账） ============ */
+.bill-month-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.bill-month-nav { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; }
+.bill-month-nav #bill-month-label { min-width: 86px; text-align: center; }
+.bill-sum {
+  display: flex; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--line); background: var(--card); margin-bottom: 12px;
+}
+.bill-sum .cell { flex: 1; padding: 12px 8px; text-align: center; }
+.bill-sum .cell + .cell { border-left: 1px solid var(--line); }
+.bill-sum .k { font-size: 11px; color: var(--text-3); margin-bottom: 3px; }
+.bill-sum .v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bill-sum .v.ok { color: var(--ok); }
+.bill-sum .v.bad { color: var(--danger); }
+.bill-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border-radius: 12px; background: var(--card); border: 1px solid var(--line);
+  margin-bottom: 8px; cursor: pointer; transition: border-color .12s;
+}
+.bill-row:hover { border-color: var(--accent); }
+.bill-row .face {
+  width: 40px; height: 26px; border-radius: 6px; flex: none; object-fit: cover;
+}
+.bill-row .mid { flex: 1; min-width: 0; }
+.bill-row .bn { font-size: 13px; font-weight: 600; }
+.bill-row .bs { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.bill-row .amt { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bill-hist {
+  border: 1px dashed var(--line); border-radius: 12px;
+  padding: 6px 12px; margin: -4px 0 10px 18px;
+}
+.bill-hist .h-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-2); padding: 5px 0;
+}
+.bill-hist .h-head { color: var(--text); font-weight: 600; border-bottom: 1px solid var(--line); }
+.bill-hist .h-fold summary {
+  cursor: pointer; padding: 6px 0; color: var(--text-3); font-size: 12px; list-style: none;
+}
+.bill-hist .h-fold summary::before { content: "▸ "; }
+.bill-hist .h-fold[open] summary::before { content: "▾ "; }
+.h-toggle {
+  border: 1px solid var(--line); background: none; color: var(--text-3);
+  font-size: 11px; padding: 2px 9px; border-radius: 999px; cursor: pointer; font-family: inherit;
+}
+.h-toggle.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); border-color: transparent; }
+.h-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.h-toggle.ok:hover { border-color: var(--ok); color: var(--ok); }
+.h-close {
+  border: none; background: none; color: var(--text-3); font-size: 15px;
+  cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.h-close:hover { color: var(--danger); }
+
+/* ============ 待办页：日期条 ↔ 月历 双视图（1.2.0） ============ */
+.todo-seg {
+  display: inline-flex; border: 1px solid var(--line); border-radius: 999px;
+  overflow: hidden; margin-bottom: 12px; background: var(--card);
+}
+.todo-seg button {
+  border: none; background: none; padding: 5px 16px; font-size: 12.5px;
+  color: var(--text-2); cursor: pointer; font-family: inherit; transition: background .12s;
+}
+.todo-seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
+.mcal { border: 1px solid var(--line); border-radius: 14px; background: var(--card); padding: 10px; }
+.mcal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.mcal-month { font-size: 14px; font-weight: 700; }
+.mcal-nav { display: flex; align-items: center; gap: 6px; }
+.mcal-nav .icon-btn { width: 28px; height: 28px; }
+.mcal-week { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 2px; }
+.mcal-week span { text-align: center; font-size: 11px; color: var(--text-3); padding: 3px 0; }
+.mcal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mcal-grid .cell {
+  min-height: 48px; border-radius: 9px; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-start; padding: 4px 2px 5px; gap: 2px;
+  cursor: pointer; border: none; background: none; font-family: inherit; position: relative;
+}
+.mcal-grid .cell.blank { cursor: default; }
+.mcal-grid .cell .d { font-size: 12.5px; font-weight: 600; line-height: 1.2; color: var(--text); }
+.mcal-grid .cell .marks { display: flex; gap: 3px; align-items: center; height: 12px; }
+.mk { width: 9px; height: 9px; border-radius: 3px; }
+.mk-blue { background: var(--accent); }
+.mk-warn { background: var(--warn); }
+.mk-danger { background: var(--danger); }
+.mk-ok { background: var(--ok); }
+.mk-bill { width: 5px; height: 5px; border-radius: 50%; background: var(--text-3); opacity: .55; }
+.mcal-grid .cell.today { outline: 1.5px solid var(--accent); }
+.mcal-grid .cell.today .d { color: var(--accent); }
+.mcal-grid .cell.picked { background: var(--accent-weak); outline: 1.5px solid var(--accent); }
+.mcal-legend {
+  display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px;
+  color: var(--text-3); margin: 10px 2px;
+}
+.mcal-legend i { display: inline-flex; align-items: center; gap: 4px; font-style: normal; }
+.mday-title { font-size: 13px; font-weight: 600; margin: 14px 2px 8px; }
+.day-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+  border-radius: 12px; background: var(--card); border: 1px solid var(--line); margin-bottom: 7px;
+}
+.day-item .face { width: 36px; height: 23px; border-radius: 5px; flex: none; }
+.day-item .face.ghost { background: var(--panel-2, var(--line)); }
+.day-item .mid { flex: 1; min-width: 0; }
+.day-item .bn { font-size: 13px; font-weight: 600; }
+.day-item .bs { font-size: 11px; color: var(--text-3); }
+.day-item .badge { flex: none; }
+.mday-check {
+  width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--line);
+  background: none; color: transparent; font-size: 14px; cursor: pointer; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.mday-check:hover { border-color: var(--accent); color: var(--accent); }
+.mday-check.done { background: var(--ok); border-color: var(--ok); color: #fff; }
+
 /* ============ 弹窗 / Toast ============ */
 /* 弹窗体系（照抄 SubDeck）：mask 底部对齐 + modal 底部上弹，桌面媒体查询改居中 */
 .modal-mask {

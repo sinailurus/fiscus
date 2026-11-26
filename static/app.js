@@ -15,6 +15,9 @@ const state = {
   tab: "cards", cardView: localStorage.getItem("fiscus-view") || "list",
   walletOpenId: null,
   detailId: null, editId: null, editImageFile: null, editImageCleared: false,
+  billMonth: null, billHist: new Set(),
+  todoView: localStorage.getItem("fiscus-todo-view") || "datebar",
+  mcalMonth: null, mcalPicked: null,
 };
 
 /* ---------------------------------------------------------------- API */
@@ -779,6 +782,270 @@ function initTodoSwipe() {
   }, true);
 }
 
+/* ---------------------------------------------------------------- 账单页（1.2.0：跨卡月度总账 + 单卡历史 + 补录） */
+const nowYM = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+const shiftMonth = (ym, delta) => {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+const monthLabel = (ym) => {
+  const [y, m] = ym.split("-").map(Number);
+  return `${y}年${m}月`;
+};
+const daysBetween = (iso) => {
+  if (!iso) return 0;
+  const d = new Date(iso + "T00:00:00"), n = new Date();
+  n.setHours(0, 0, 0, 0);
+  return Math.round((d - n) / 864e5);
+};
+
+function billBadge(r, urgent) {
+  if (!r.has_bill) return `<span class="badge badge-deep">未录</span>`;
+  if (r.paid) return `<span class="badge badge-ok">已还</span>`;
+  if (r.overdue) return `<span class="badge badge-danger">逾期</span>`;
+  if (daysBetween(r.due_date) <= urgent) return `<span class="badge badge-warn">临期</span>`;
+  return `<span class="badge badge-blue">未还</span>`;
+}
+
+async function renderBills() {
+  if (!state.billMonth) state.billMonth = nowYM();
+  $("#bill-month-label").textContent = monthLabel(state.billMonth);
+  const urgent = state.settings?.urgent_days || 3;
+  const data = await api(`/api/bills?month=${state.billMonth}`);
+  const s = data.summary;
+  $("#bill-sum").innerHTML = `
+    <div class="cell"><div class="k">本期应还</div><div class="v">¥${fmtMoney(s.total)}</div></div>
+    <div class="cell"><div class="k">已还</div><div class="v ok">¥${fmtMoney(s.paid)}</div></div>
+    <div class="cell"><div class="k">未还</div><div class="v bad">¥${fmtMoney(s.unpaid)}</div></div>`;
+  const list = $("#bills-list");
+  list.innerHTML = data.cards.map((r) => {
+    const face = r.image_url
+      ? `<img class="face" src="${r.image_url}" alt="">`
+      : `<div class="face" style="background:${esc(r.color || "#2d3a5c")}"></div>`;
+    return `
+      <div class="bill-row" data-id="${r.card_id}">
+        ${face}
+        <div class="mid">
+          <div class="bn">${esc(r.name)}</div>
+          <div class="bs">${r.has_bill && r.due_date ? `还款日 ${r.due_date.slice(5)} · ${state.billMonth} 期` : `${esc(r.bank || "")} · 本期未录入`}</div>
+        </div>
+        ${r.has_bill ? `<div class="amt">¥${fmtMoney(r.amount)}</div>` : ""}
+        ${billBadge(r, urgent)}
+      </div>
+      <div class="bill-hist hidden" data-hist="${r.card_id}"></div>`;
+  }).join("");
+  /* 展开状态记忆：重渲染后恢复已展开的单卡历史 */
+  for (const id of state.billHist) await fillBillHist(id);
+}
+
+async function fillBillHist(cardId) {
+  const box = $(`.bill-hist[data-hist="${cardId}"]`);
+  if (!box) return;
+  const rows = await api(`/api/cards/${cardId}/bills`);
+  const cur = state.billMonth;
+  const past = rows.filter((b) => b.period !== cur);
+  const pastSum = past.reduce((a, b) => a + (b.paid ? b.amount : b.amount), 0);
+  const item = (b) => `
+    <div class="h-row">
+      <span>${b.period} 期${b.period === cur ? ' <span class="badge badge-deep">本期</span>' : ""}</span>
+      <span>${b.due_date || "--"} · ¥${fmtMoney(b.amount)}
+        <button class="h-toggle ${b.paid ? "ok" : ""}" data-id="${cardId}" data-period="${b.period}"
+          data-paid="${b.paid ? 1 : 0}" data-due="${b.due_date || ""}" data-amount="${b.amount}"
+          title="${b.paid ? "撤销已还" : "标记已还"}">${b.paid ? "已还" : "未还"}</button></span>
+    </div>`;
+  const FOLD = 5;
+  const head = `
+    <div class="h-row h-head">
+      <span>该卡共 ${rows.length} 期账单${past.length ? ` · 往期合计 ¥${fmtMoney(pastSum)}` : ""}</span>
+      <button class="h-close" data-id="${cardId}" title="收起">×</button>
+    </div>`;
+  let body = "";
+  if (rows.length <= FOLD) {
+    body = rows.map(item).join("");
+  } else {
+    body = rows.slice(0, FOLD).map(item).join("") + `
+      <details class="h-fold"><summary>共 ${rows.length} 期 · 展开剩余 ${rows.length - FOLD} 期</summary>
+        ${rows.slice(FOLD).map(item).join("")}</details>`;
+  }
+  box.innerHTML = head + `<div class="h-rows">${body}</div>`;
+  box.classList.remove("hidden");
+}
+
+/* 行点击展开/收起单卡历史（点按钮类元素不触发） */
+$("#bills-list")?.addEventListener("click", async (e) => {
+  const tg = e.target;
+  const hTg = tg.closest(".h-toggle");
+  if (hTg) {                            /* 历史期次直接打卡 */
+    const paid = hTg.dataset.paid === "1";
+    await api(`/api/cards/${hTg.dataset.id}/bill`, { method: "POST",
+      body: { period: hTg.dataset.period, paid: !paid,
+              due_date: hTg.dataset.due, amount: Number(hTg.dataset.amount || 0) } });
+    toast(!paid ? "已标记还清" : "已撤销，恢复未还");
+    await renderBills(); await refreshOverview();
+    return;
+  }
+  if (tg.closest(".h-close")) {
+    const id = Number(tg.closest(".h-close").dataset.id);
+    state.billHist.delete(id);
+    $(`.bill-hist[data-hist="${id}"]`)?.classList.add("hidden");
+    return;
+  }
+  const row = tg.closest(".bill-row");
+  if (!row) return;
+  const id = Number(row.dataset.id);
+  const box = $(`.bill-hist[data-hist="${id}"]`);
+  if (!box) return;
+  if (box.classList.contains("hidden")) {
+    state.billHist.add(id);
+    await fillBillHist(id);
+  } else {
+    state.billHist.delete(id);
+    box.classList.add("hidden");
+  }
+});
+
+$("#bill-prev")?.addEventListener("click", async () => {
+  state.billMonth = shiftMonth(state.billMonth, -1); await renderBills();
+});
+$("#bill-next")?.addEventListener("click", async () => {
+  state.billMonth = shiftMonth(state.billMonth, 1); await renderBills();
+});
+
+/* 补录往期弹窗 */
+$("#btn-bill-add")?.addEventListener("click", () => {
+  const cards = state.overview?.cards || [];
+  $("#ba-card").innerHTML = cards.map((c) =>
+    `<option value="${c.id}">${esc(c.name)}</option>`).join("");
+  $("#ba-period").value = state.billMonth || nowYM();
+  const first = cards[0];
+  $("#ba-due").value = first?.next_due || "";
+  $("#ba-amount").value = "";
+  $("#ba-paid").checked = false;
+  $("#billadd-mask").classList.remove("hidden");
+});
+$("#ba-card")?.addEventListener("change", () => {
+  const c = (state.overview?.cards || []).find((x) => x.id === Number($("#ba-card").value));
+  if (c && $("#ba-period").value === (state.billMonth || nowYM())) $("#ba-due").value = c.next_due || "";
+});
+$("#btn-ba-cancel")?.addEventListener("click", () => $("#billadd-mask").classList.add("hidden"));
+$("#btn-ba-go")?.addEventListener("click", async () => {
+  const id = Number($("#ba-card").value);
+  const period = $("#ba-period").value;
+  const due = $("#ba-due").value;
+  if (!/^\d{4}-\d{2}$/.test(period)) return toast("账单期格式应为 YYYY-MM");
+  if (!due) return toast("还款截止日必填");
+  const amount = Number($("#ba-amount").value || 0);
+  await api(`/api/cards/${id}/bill`, { method: "POST",
+    body: { period, due_date: due, amount, paid: $("#ba-paid").checked } });
+  $("#billadd-mask").classList.add("hidden");
+  toast("账单已保存");
+  await renderBills(); await refreshOverview();
+});
+
+/* ---------------------------------------------------------------- 待办月历（1.2.0：日期条 ↔ 月历双视图） */
+function applyTodoView() {
+  const mcal = state.todoView === "mcal";
+  $("#todo-datebar-wrap")?.classList.toggle("hidden", mcal);
+  $("#todo-mcal-wrap")?.classList.toggle("hidden", !mcal);
+  $$("#todo-seg button").forEach((b) =>
+    b.classList.toggle("on", b.dataset.tview === state.todoView));
+  if (mcal) renderMcal();
+}
+$$("#todo-seg button").forEach((b) =>
+  b.addEventListener("click", () => {
+    state.todoView = b.dataset.tview;
+    localStorage.setItem("fiscus-todo-view", state.todoView);
+    applyTodoView();
+  }));
+
+async function renderMcal() {
+  if (!state.mcalMonth) state.mcalMonth = nowYM();
+  $("#mcal-title").textContent = monthLabel(state.mcalMonth);
+  const cal = await api(`/api/bills/calendar?month=${state.mcalMonth}`);
+  const [y, m] = state.mcalMonth.split("-").map(Number);
+  const firstDow = (new Date(y, m - 1, 1).getDay() + 6) % 7;   // 周一开头
+  const last = new Date(y, m, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push(`<div class="cell blank"></div>`);
+  for (let d = 1; d <= last; d++) {
+    const iso = `${state.mcalMonth}-${String(d).padStart(2, "0")}`;
+    const evs = cal.days[iso] || [];
+    const repays = evs.filter((e) => e.kind === "repay");
+    const hasBill = evs.some((e) => e.kind === "bill");
+    const marks = repays.map((e) =>
+      `<span class="mk mk-${e.state === "paid" ? "ok" : e.state}"></span>`).join("");
+    const billDot = hasBill ? `<span class="mk mk-bill"></span>` : "";
+    cells.push(`<div class="cell${iso === cal.today ? " today" : ""}${iso === state.mcalPicked ? " picked" : ""}"
+      data-date="${iso}"><span class="d">${d}</span>
+      ${(marks || billDot) ? `<span class="marks">${marks}${billDot}</span>` : ""}</div>`);
+  }
+  $("#mcal-grid").innerHTML = cells.join("");
+  if (state.mcalPicked) await renderMcalDay(state.mcalPicked);
+}
+
+async function renderMcalDay(iso) {
+  const box = $("#mcal-day");
+  const cal = await api(`/api/bills/calendar?month=${iso.slice(0, 7)}`);
+  const evs = (cal.days[iso] || []);
+  const repays = evs.filter((e) => e.kind === "repay");
+  const bills = evs.filter((e) => e.kind === "bill");
+  let html = `<div class="mday-title">${monthLabel(iso.slice(0, 7))} ${Number(iso.slice(8))} 日</div>`;
+  html += repays.map((e) => `
+    <div class="day-item">
+      <div class="face" style="background:${esc(e.color || "#2d3a5c")}"></div>
+      <div class="mid"><div class="bn">${esc(e.name)}</div>
+        <div class="bs">¥${fmtMoney(e.amount)} · ${e.due_date}</div></div>
+      <button class="mday-check ${e.paid ? "done" : ""}" data-id="${e.card_id}"
+        data-period="${e.period}" data-due="${e.due_date}" data-amount="${e.amount}"
+        title="${e.paid ? "撤销已还" : "标记已还"}">✓</button>
+    </div>`).join("");
+  if (bills.length) {
+    html += `<div class="day-item info"><div class="face ghost"></div>
+      <div class="mid"><div class="bn">账单日出账</div>
+      <div class="bs">${bills.map((b) => esc(b.name)).join("、")}</div></div></div>`;
+  }
+  if (!repays.length && !bills.length) {
+    html += `<div class="empty-tip">这一天没有安排。</div>`;
+  }
+  box.innerHTML = html;
+}
+
+$("#mcal-grid")?.addEventListener("click", async (e) => {
+  const cell = e.target.closest(".cell[data-date]");
+  if (!cell) return;
+  state.mcalPicked = cell.dataset.date;
+  $$("#mcal-grid .cell").forEach((c) =>
+    c.classList.toggle("picked", c.dataset.date === state.mcalPicked));
+  await renderMcalDay(state.mcalPicked);
+});
+$("#mcal-day")?.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".mday-check");
+  if (!btn) return;
+  const paid = btn.classList.contains("done");
+  await api(`/api/cards/${btn.dataset.id}/bill`, { method: "POST",
+    body: { period: btn.dataset.period, paid: !paid,
+            due_date: btn.dataset.due, amount: Number(btn.dataset.amount || 0) } });
+  toast(!paid ? "已标记还清" : "已撤销，提醒恢复");
+  await refreshOverview();
+  await renderMcal();
+});
+$("#mcal-prev")?.addEventListener("click", async () => {
+  state.mcalMonth = shiftMonth(state.mcalMonth, -1); state.mcalPicked = null;
+  $("#mcal-day").innerHTML = ""; await renderMcal();
+});
+$("#mcal-next")?.addEventListener("click", async () => {
+  state.mcalMonth = shiftMonth(state.mcalMonth, 1); state.mcalPicked = null;
+  $("#mcal-day").innerHTML = ""; await renderMcal();
+});
+$("#mcal-today")?.addEventListener("click", async () => {
+  state.mcalMonth = nowYM(); state.mcalPicked = null;
+  $("#mcal-day").innerHTML = ""; await renderMcal();
+});
+
 /* ---------------------------------------------------------------- 卡片编辑弹窗 */
 function openCardModal(id = null) {
   state.editId = id;
@@ -1212,9 +1479,10 @@ $$(".tab-item, .topnav .nav-btn").forEach((el) =>
     state.walletOpenId = null;      // 离开卡包即收起展开态
     $$(".tab-item, .topnav .nav-btn").forEach((b) =>
       b.classList.toggle("active", b.dataset.tab === tab));
-    ["cards", "todo", "settings"].forEach((t) =>
+    ["cards", "todo", "bills", "settings"].forEach((t) =>
       $(`#tab-${t}`).classList.toggle("hidden", t !== tab));
-    if (tab === "todo") await refreshOverview();
+    if (tab === "todo") { await refreshOverview(); applyTodoView(); }
+    if (tab === "bills") await renderBills();
   }));
 
 /* ---------------------------------------------------------------- 启动 */

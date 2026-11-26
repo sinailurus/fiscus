@@ -5,6 +5,7 @@
 零预置规则、零推算：所有数据均为用户手动录入，本后端只做
 通用日历滚动（每月 X 号 / 每年 X 月 X 日），不做任何银行业务推算。
 """
+import calendar
 import datetime
 import json
 import os
@@ -19,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from . import auth, mailer, reminders
 from .db import MEDIA_DIR, db, get_setting, init_db, set_setting
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0-beta.1"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 
 CARD_IMAGE_RE = re.compile(r"^card_\d+\.(png|jpg|webp)$")
@@ -673,6 +674,121 @@ def list_bills(request: Request, card_id: int):
             "SELECT id, period, amount, due_date, paid, updated_at FROM bills "
             "WHERE card_id=? ORDER BY period DESC", (card_id,)).fetchall()
         return [dict(r) for r in rows]
+
+
+# ---------------------------------------------------------------- 账单总览（1.2.0 账单 tab）
+
+def _month_days(year: int, month: int) -> int:
+    return calendar.monthrange(year, month)[1]
+
+
+@app.get("/api/bills")
+def bills_month(request: Request, month: str = ""):
+    """跨卡月度总账：该账单期每张卡一行（未录金额的卡 has_bill=false）+ 汇总。
+
+    还款日所属自然月即账单期（与 card_state 的 period 口径一致）。
+    """
+    require_auth(request)
+    if not re.match(r"^\d{4}-\d{2}$", month or ""):
+        raise HTTPException(status_code=400, detail="月份格式应为 YYYY-MM")
+    try:
+        year, mon = int(month[:4]), int(month[5:7])
+        if not (1 <= mon <= 12):
+            raise ValueError
+    except ValueError:
+        raise HTTPException(status_code=400, detail="月份不合法")
+    today = datetime.date.today()
+    with db() as conn:
+        rows = []
+        total = paid_sum = unpaid_sum = 0.0
+        paid_count = bill_count = 0
+        for row in conn.execute("SELECT * FROM cards ORDER BY sort_order, id"):
+            bill = conn.execute(
+                "SELECT amount, due_date, paid FROM bills WHERE card_id=? AND period=?",
+                (row["id"], month)).fetchone()
+            r = {
+                "card_id": row["id"], "name": row["name"], "bank": row["bank"],
+                "color": row["color"],
+                "image_url": f"/api/cards/image/{row['card_image']}" if row["card_image"] else "",
+                "has_bill": bool(bill),
+                "amount": bill["amount"] if bill else 0,
+                "due_date": bill["due_date"] if bill else "",
+                "paid": bool(bill["paid"]) if bill else False,
+            }
+            if bill:
+                bill_count += 1
+                total += bill["amount"]
+                if bill["paid"]:
+                    paid_count += 1
+                    paid_sum += bill["amount"]
+                else:
+                    unpaid_sum += bill["amount"]
+                    if bill["due_date"] and bill["due_date"] < today.isoformat():
+                        r["overdue"] = True
+            rows.append(r)
+        return {
+            "month": month, "today": today.isoformat(),
+            "cards": rows,
+            "summary": {"total": round(total, 2), "paid": round(paid_sum, 2),
+                        "unpaid": round(unpaid_sum, 2),
+                        "count": bill_count, "paid_count": paid_count},
+        }
+
+
+@app.get("/api/bills/calendar")
+def bills_calendar(request: Request, month: str = ""):
+    """月历标记（待办月历视图）：该月每天的还款日 / 账单日事件与状态。
+
+    还款日状态：paid 已还绿 / overdue 逾期红 / urgent 临期橙 / todo 未还蓝；
+    无账单记录的过去日期不标（没数据不假装），未来的还款日照常标 todo。
+    """
+    require_auth(request)
+    if not re.match(r"^\d{4}-\d{2}$", month or ""):
+        raise HTTPException(status_code=400, detail="月份格式应为 YYYY-MM")
+    try:
+        year, mon = int(month[:4]), int(month[5:7])
+        if not (1 <= mon <= 12):
+            raise ValueError
+    except ValueError:
+        raise HTTPException(status_code=400, detail="月份不合法")
+    today = datetime.date.today()
+    with db() as conn:
+        urgent = reminders._urgent_days(conn)
+        days: dict = {}
+        for row in conn.execute("SELECT * FROM cards ORDER BY sort_order, id"):
+            repay_day = int(row["repay_day"] or 0)
+            bill_day = int(row["bill_day"] or 0)
+            last = _month_days(year, mon)
+            rd = min(repay_day, last) if repay_day else 0
+            bd = min(bill_day, last) if bill_day else 0
+            face = {"card_id": row["id"], "name": row["name"], "color": row["color"],
+                    "image_url": f"/api/cards/image/{row['card_image']}" if row["card_image"] else "",
+                    "bank": row["bank"]}
+            if rd:
+                due = datetime.date(year, mon, rd).isoformat()
+                bill = conn.execute(
+                    "SELECT amount, due_date, paid FROM bills WHERE card_id=? AND period=?",
+                    (row["id"], month)).fetchone()
+                if bill:
+                    st = "paid" if bill["paid"] else (
+                        "overdue" if bill["due_date"] and bill["due_date"] < today.isoformat()
+                        else "urgent" if (datetime.date.fromisoformat(bill["due_date"] or due)
+                                          - today).days <= urgent
+                        else "todo")
+                    entry = {**face, "kind": "repay", "state": st, "date": due,
+                             "period": month, "amount": bill["amount"],
+                             "due_date": bill["due_date"] or due, "paid": bool(bill["paid"])}
+                elif datetime.date(year, mon, rd) >= today:
+                    entry = {**face, "kind": "repay", "state": "todo", "date": due,
+                             "period": month, "amount": 0, "due_date": due, "paid": False}
+                else:
+                    entry = None
+                if entry:
+                    days.setdefault(due, []).append(entry)
+            if bd:
+                bdate = datetime.date(year, mon, bd).isoformat()
+                days.setdefault(bdate, []).append({**face, "kind": "bill", "date": bdate})
+        return {"month": month, "today": today.isoformat(), "days": days}
 
 
 # ---------------------------------------------------------------- 年费

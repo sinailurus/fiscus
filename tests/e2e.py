@@ -141,6 +141,93 @@ with sync_playwright() as p:
     pg.click("#btn-detail-close")
     pg.screenshot(path=SHOT + "04_mobile_todo.png")
 
+    # ---------- 账单 tab（1.2.0：跨卡月度总账 / 单卡历史 / 补录） ----------
+    import datetime as _dt
+    today = _dt.date.today()
+    ym = today.strftime("%Y-%m")
+    prev_ym = (_dt.date(today.year, today.month, 1) - _dt.timedelta(days=1)).strftime("%Y-%m")
+    pg.locator('.tab-item[data-tab="bills"]').click()
+    pg.wait_for_timeout(900)
+    check("账单页月份标签", today.strftime("%Y年%m月") in pg.inner_text("#bill-month-label"),
+          pg.inner_text("#bill-month-label"))
+    sumtxt = pg.inner_text("#bill-sum")
+    check("账单汇总三格", "本期应还" in sumtxt and "已还" in sumtxt and "未还" in sumtxt)
+    api_rows = pg.evaluate(f"fetch('/api/bills?month={ym}').then(r => r.json())")
+    check("汇总金额正确(已还卡)", api_rows["summary"]["total"] == 2400
+          and api_rows["summary"]["paid"] == 2400, str(api_rows["summary"]))
+    mk_card = next((r for r in api_rows["cards"] if r["name"] == "招行白金卡"), None)
+    check("未录卡 has_bill=false", mk_card and not mk_card["has_bill"],
+          str(mk_card and mk_card["name"]))
+    badges = pg.locator("#bills-list .badge").all_inner_texts()
+    check("徽章状态分布", "已还" in badges and "未录" in badges, str(badges))
+    # 单卡历史展开（点已还徽章的行：建行卡有一期）
+    pg.locator(".bill-row", has_text="已还").first.click()
+    pg.wait_for_timeout(700)
+    check("单卡历史展开", pg.locator(".bill-hist:not(.hidden)").count() == 1
+          and "共 1 期" in pg.locator(".bill-hist:not(.hidden)").first.inner_text(),
+          pg.locator(".bill-hist:not(.hidden)").first.inner_text()[:50])
+    # 补录上期账单（建行卡上月）
+    pg.click("#btn-bill-add")
+    pg.wait_for_timeout(300)
+    pg.select_option("#ba-card", label="建行卡")
+    pg.fill("#ba-period", prev_ym)
+    pg.fill("#ba-due", f"{prev_ym}-28")
+    pg.fill("#ba-amount", "1800")
+    pg.click("#btn-ba-go")
+    pg.wait_for_timeout(900)
+    api_prev = pg.evaluate(f"fetch('/api/bills?month={prev_ym}').then(r => r.json())")
+    prev_row = next((r for r in api_prev["cards"] if r["name"] == "建行卡"), None)
+    check("补录上月账单生效", prev_row and prev_row["has_bill"] and prev_row["amount"] == 1800,
+          str(prev_row))
+    # 切到上月看行渲染
+    pg.click("#bill-prev")
+    pg.wait_for_timeout(700)
+    prev_badges = pg.locator("#bills-list .badge").all_inner_texts()
+    check("上月视图含补录徽章", "逾期" in prev_badges, str(prev_badges))
+    pg.click("#bill-next")
+    pg.wait_for_timeout(600)
+
+    # ---------- 待办月历（1.2.0：日期条 ↔ 月历双视图 + 点天打卡） ----------
+    pg.locator('.tab-item[data-tab="todo"]').click()
+    pg.wait_for_timeout(800)
+    check("日期条为默认视图", pg.is_visible("#todo-datebar-wrap")
+          and not pg.is_visible("#todo-mcal-wrap"))
+    pg.click('#todo-seg button[data-tview="mcal"]')
+    pg.wait_for_timeout(900)
+    check("月历视图切换", pg.is_visible("#todo-mcal-wrap")
+          and not pg.is_visible("#todo-datebar-wrap"))
+    cells = pg.locator("#mcal-grid .cell").count()
+    check("月历格子数", cells >= 28, f"cells={cells}")
+    marks = pg.locator("#mcal-grid .mk").count()
+    check("月历还款标记", marks >= 1, f"marks={marks}")
+    legend = pg.inner_text(".mcal-legend")
+    check("月历图例齐全", all(k in legend for k in ("逾期", "临期", "还款日", "已还", "账单日")))
+    cal = pg.evaluate(f"fetch('/api/bills/calendar?month={ym}').then(r => r.json())")
+    repay_days = [d for d, evs in cal["days"].items() if any(e["kind"] == "repay" for e in evs)]
+    ok_state = any(e.get("state") == "paid" for evs in cal["days"].values() for e in evs if e["kind"] == "repay")
+    check("月历状态含已还", ok_state)
+    pg.screenshot(path=SHOT + "09_mobile_mcal.png")
+    # 点有还款标记的天 → 当日清单 → 打卡
+    pg.locator("#mcal-grid .cell:has(.mk):not(.blank)").first.click()
+    pg.wait_for_timeout(700)
+    check("点天出当日清单", pg.locator("#mcal-day .day-item").count() >= 1)
+    has_check = pg.locator("#mcal-day .mday-check").count()
+    if has_check:
+        was_done = "done" in (pg.locator("#mcal-day .mday-check").first.get_attribute("class") or "")
+        pg.locator("#mcal-day .mday-check").first.click()
+        pg.wait_for_timeout(900)
+        toggled = pg.evaluate(
+            f"fetch('/api/bills/calendar?month={ym}').then(r => r.json())"
+            ".then(r => Object.values(r.days).flat().filter(e => e.kind === 'repay')"
+            ".map(e => e.state))")
+        check("月历打卡翻转状态", ("paid" in toggled) != was_done, str(set(toggled)))
+    # 切回日期条保持记忆
+    pg.click('#todo-seg button[data-tview="datebar"]')
+    pg.wait_for_timeout(400)
+    check("切回日期条", pg.is_visible("#todo-datebar-wrap"))
+    view_saved = pg.evaluate("localStorage.getItem('fiscus-todo-view')")
+    check("月历视图记忆落盘", view_saved == "datebar", view_saved)
+
     # 卡包视图点卡 → 展开态（置顶卡 + 基本信息块 + 编辑按钮），点编辑进编辑弹窗
     pg.locator('.tab-item[data-tab="cards"]').click()
     pg.click('.seg-btn[data-view="wallet"]')
