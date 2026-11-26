@@ -307,9 +307,17 @@ $("#card-view-seg")?.addEventListener("click", (e) => {
   state.cardView = btn.dataset.view;
   localStorage.setItem("fiscus-view", state.cardView);
   $$("#card-view-seg .seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
-  $("#card-list").classList.toggle("hidden", state.cardView !== "list");
-  $("#card-wallet").classList.toggle("hidden", state.cardView !== "wallet");
+  applyCardViewDom();
 });
+
+/* 视图切换统一出口：桌面断点下表格由 CSS 强制显示，必须同步控制，否则卡包视图下表格与层叠卡同屏 */
+function applyCardViewDom() {
+  const listView = state.cardView === "list";
+  $("#card-list").classList.toggle("hidden", !listView);
+  $("#card-wallet").classList.toggle("hidden", listView);
+  const table = $("#cards-table-wrap");
+  if (table) table.classList.toggle("hidden", !listView);
+}
 
 /* ---------------------------------------------------------------- 聚焦详情 */
 async function openDetail(cardId) {
@@ -1145,8 +1153,7 @@ $$(".tab-item, .topnav .nav-btn").forEach((el) =>
     (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
   $$("#card-view-seg .seg-btn").forEach((b) =>
     b.classList.toggle("active", b.dataset.view === state.cardView));
-  $("#card-list").classList.toggle("hidden", state.cardView !== "list");
-  $("#card-wallet").classList.toggle("hidden", state.cardView !== "wallet");
+  applyCardViewDom();
   try {
     if (!(await loadAll())) return;
   } catch (ex) { console.error(ex); return; }
