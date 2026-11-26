@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from . import auth, mailer, reminders
 from .db import MEDIA_DIR, db, get_setting, init_db, set_setting
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 
 CARD_IMAGE_RE = re.compile(r"^card_\d+\.(png|jpg|webp)$")
@@ -352,6 +352,8 @@ def _validate_card(body: dict, partial: bool = False) -> dict:
         out["limit"] = limit
     if "notes" in body or not partial:
         out["notes"] = str(body.get("notes") or "")[:500]
+    if "report_combined" in body or not partial:
+        out["report_combined"] = 1 if body.get("report_combined") else 0
     return out
 
 
@@ -387,11 +389,11 @@ def create_card(request: Request, body: dict):
         max_sort = conn.execute("SELECT COALESCE(MAX(sort_order),0) m FROM cards").fetchone()["m"]
         cur = conn.execute(
             """INSERT INTO cards (name, bank, color, bill_day, repay_day, lead_days,
-               limit_amount, notes, sort_order, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+               limit_amount, notes, sort_order, report_combined, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             (data["name"], data.get("bank", ""), data.get("color", ""), data.get("bill_day", 0),
              data["repay_day"], data.get("lead_days", 0), data.get("limit", 0),
-             data.get("notes", ""), max_sort + 1, now, now))
+             data.get("notes", ""), max_sort + 1, data.get("report_combined", 0), now, now))
         return _card_payload(conn, cur.lastrowid)
 
 
@@ -504,6 +506,56 @@ def clear_card_image(request: Request, card_id: int):
 def get_card_image(request: Request, filename: str):
     require_auth(request)
     if not CARD_IMAGE_RE.match(filename):
+        raise HTTPException(status_code=400, detail="非法文件名")
+    path = os.path.join(MEDIA_DIR, "cards", filename)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="文件不存在")
+    media = {"png": "image/png", "jpg": "image/jpeg", "webp": "image/webp"}[filename.rsplit(".", 1)[1]]
+    return FileResponse(path, media_type=media,
+                        headers={"Cache-Control": "private, max-age=86400"})
+
+
+# ---- 银行 logo（自传；默认无图时邮件与前端用银行名首字色块兜底） ----
+
+@app.post("/api/cards/{card_id}/bank-logo")
+def upload_bank_logo(request: Request, card_id: int, file: UploadFile = File(...)):
+    require_auth(request)
+    filename, data = _save_image(file, "banklogo", 2 * 1024 * 1024)
+    with db() as conn:
+        row = conn.execute("SELECT bank_logo FROM cards WHERE id=?", (card_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="卡片不存在")
+        with open(os.path.join(MEDIA_DIR, "cards", filename), "wb") as f:
+            f.write(data)
+        conn.execute("UPDATE cards SET bank_logo=?, updated_at=? WHERE id=?",
+                     (filename, datetime.datetime.now().isoformat(timespec="seconds"), card_id))
+        if row["bank_logo"]:
+            old = os.path.join(MEDIA_DIR, "cards", row["bank_logo"])
+            if os.path.isfile(old):
+                os.remove(old)
+    return {"ok": True, "bank_logo_url": f"/api/cards/bank-logo/{filename}"}
+
+
+@app.delete("/api/cards/{card_id}/bank-logo")
+def clear_bank_logo(request: Request, card_id: int):
+    require_auth(request)
+    with db() as conn:
+        row = conn.execute("SELECT bank_logo FROM cards WHERE id=?", (card_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="卡片不存在")
+        conn.execute("UPDATE cards SET bank_logo='', updated_at=? WHERE id=?",
+                     (datetime.datetime.now().isoformat(timespec="seconds"), card_id))
+        if row["bank_logo"]:
+            path = os.path.join(MEDIA_DIR, "cards", row["bank_logo"])
+            if os.path.isfile(path):
+                os.remove(path)
+    return {"ok": True}
+
+
+@app.get("/api/cards/bank-logo/{filename}")
+def get_bank_logo(request: Request, filename: str):
+    require_auth(request)
+    if not CARD_IMAGE_RE.match(filename.replace("banklogo_", "card_", 1)) or not filename.startswith("banklogo_"):
         raise HTTPException(status_code=400, detail="非法文件名")
     path = os.path.join(MEDIA_DIR, "cards", filename)
     if not os.path.isfile(path):

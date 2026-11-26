@@ -405,3 +405,5 @@ a { color: var(--accent); text-decoration: none; }
   .tab-item.active { background: var(--accent-weak); }
   .tab-badge { top: 2px; right: 2px; }
 }
+
+.form-hint { margin-top: 4px; font-size: 12px; color: var(--text-3, #98a2b3); }

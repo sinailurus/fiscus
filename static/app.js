@@ -567,6 +567,8 @@ function openCardModal(id = null) {
   state.editId = id;
   state.editImageFile = null;
   state.editImageCleared = false;
+  state.editBankLogoFile = null;
+  state.editBankLogoCleared = false;
   const c = id ? state.overview.cards.find((x) => x.id === id) : null;
   $("#card-modal-title").textContent = id ? "编辑卡片" : "添加卡片";
   $("#f-name").value = c?.name || "";
@@ -576,10 +578,14 @@ function openCardModal(id = null) {
   $("#f-limit").value = c?.limit_amount || "";
   $("#f-notes").value = c?.notes || "";
   $("#f-color").value = c?.color || PALETTE[2];
+  $("#f-combined").checked = !!c?.report_combined;
   renderPalette($("#f-palette"), $("#f-color").value);
   const pv = $("#f-image-preview");
   pv.innerHTML = c?.image_url ? `<img src="${esc(c.image_url)}">` : "";
   $("#btn-f-image-clear").classList.toggle("hidden", !c?.image_url);
+  const bpv = $("#f-bank-logo-preview");
+  bpv.innerHTML = c?.bank_logo_url ? `<img src="${esc(c.bank_logo_url)}">` : "";
+  $("#btn-f-bank-logo-clear").classList.toggle("hidden", !c?.bank_logo_url);
   $("#btn-card-delete").classList.toggle("hidden", !id);
   $("#modal-mask").classList.remove("hidden");
   $("#card-modal").classList.remove("hidden");
@@ -620,6 +626,23 @@ $("#btn-f-image-clear")?.addEventListener("click", () => {
   $("#f-image-preview").innerHTML = "";
   $("#btn-f-image-clear").classList.add("hidden");
 });
+$("#f-bank-logo")?.addEventListener("change", () => {
+  const file = $("#f-bank-logo").files[0];
+  if (!file) return;
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) { toast("仅支持 PNG / JPG / WebP"); return; }
+  if (file.size > 2 * 1024 * 1024) { toast("图片不能超过 2MB"); return; }
+  state.editBankLogoFile = file;
+  state.editBankLogoCleared = false;
+  const reader = new FileReader();
+  reader.onload = () => { $("#f-bank-logo-preview").innerHTML = `<img src="${reader.result}">`; };
+  reader.readAsDataURL(file);
+});
+$("#btn-f-bank-logo-clear")?.addEventListener("click", () => {
+  state.editBankLogoFile = null;
+  state.editBankLogoCleared = true;
+  $("#f-bank-logo-preview").innerHTML = "";
+  $("#btn-f-bank-logo-clear").classList.add("hidden");
+});
 $("#btn-card-save")?.addEventListener("click", async () => {
   const name = $("#f-name").value.trim();
   if (!name) { toast("请填写卡名"); return; }
@@ -628,6 +651,7 @@ $("#btn-card-save")?.addEventListener("click", async () => {
     repay_day: +($("#f-repay").value || 5), bill_day: +($("#f-bill").value || 0),
     limit: +($("#f-limit").value || 0), notes: $("#f-notes").value.trim(),
     color: $("#f-color").value,
+    report_combined: $("#f-combined").checked ? 1 : 0,
   };
   let cardId = state.editId;
   try {
@@ -643,6 +667,13 @@ $("#btn-card-save")?.addEventListener("click", async () => {
       await api(`/api/cards/${cardId}/image`, { method: "POST", body: fd });
     } else if (state.editImageCleared) {
       await api(`/api/cards/${cardId}/image`, { method: "DELETE" });
+    }
+    if (state.editBankLogoFile) {
+      const fd = new FormData();
+      fd.append("file", state.editBankLogoFile);
+      await api(`/api/cards/${cardId}/bank-logo`, { method: "POST", body: fd });
+    } else if (state.editBankLogoCleared) {
+      await api(`/api/cards/${cardId}/bank-logo`, { method: "DELETE" });
     }
     toast("已保存");
     closeCardModal();

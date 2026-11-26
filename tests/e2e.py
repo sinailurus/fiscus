@@ -95,6 +95,7 @@ with sync_playwright() as p:
     check("编辑弹窗回填卡名", pg.input_value("#f-name") != "",
           f"got={pg.input_value('#f-name')!r}")
     check("编辑弹窗标题正确", "编辑" in pg.inner_text("#card-modal-title"))
+    check("编辑表单含信报合一与银行 Logo", pg.is_visible("#f-combined") and pg.is_visible("#f-bank-logo"))
     pg.click("#btn-card-modal-close")
     pg.wait_for_timeout(300)
     pg.locator(".card-row").first.click()

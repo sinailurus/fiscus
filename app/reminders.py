@@ -17,6 +17,7 @@ BENEFIT_LEAD_DEFAULT = 14    # 权益清零提前提醒（天）
 CARD_FIELDS = (
     "id", "name", "bank", "color", "card_image", "bill_day",
     "repay_day", "lead_days", "limit_amount", "notes", "sort_order",
+    "bank_logo", "report_combined",
 )
 
 
@@ -47,6 +48,7 @@ def card_state(conn: sqlite3.Connection, row: sqlite3.Row, base: datetime.date |
     card["bill_paid"] = bool(bill["paid"]) if bill else False
     card["bill_id"] = bill["id"] if bill else None
     card["image_url"] = f"/api/cards/image/{row['card_image']}" if row["card_image"] else ""
+    card["bank_logo_url"] = f"/api/cards/bank-logo/{row['bank_logo']}" if row["bank_logo"] else ""
 
     # ---- 年费 ----
     fee = conn.execute("SELECT * FROM fees WHERE card_id=?", (row["id"],)).fetchone()
@@ -159,6 +161,9 @@ def notify_entries(conn: sqlite3.Connection, lead_days: int) -> list[dict]:
                 "kind": "repay", "card": c["name"], "title": "还款提醒",
                 "date": c["next_due"], "days": c["next_due_days"],
                 "detail": f"应还 {amount}；宽限以银行 App 显示为准",
+                "bank": c["bank"], "color": c["color"],
+                "image_url": c["image_url"], "bank_logo_url": c["bank_logo_url"],
+                "combined": bool(c["report_combined"]),
             })
         f = c["fee"]
         if f and f["alert"] and f["days"] <= lead_days:

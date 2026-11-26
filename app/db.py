@@ -40,6 +40,8 @@ def init_db() -> None:
                 limit_amount REAL NOT NULL DEFAULT 0,
                 notes        TEXT NOT NULL DEFAULT '',
                 sort_order   INTEGER NOT NULL DEFAULT 0,
+                bank_logo    TEXT NOT NULL DEFAULT '',
+                report_combined INTEGER NOT NULL DEFAULT 0,
                 created_at   TEXT NOT NULL,
                 updated_at   TEXT NOT NULL
             );
@@ -87,6 +89,12 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_benefits_card ON benefits(card_id);
             """
         )
+        # 旧库平滑升级（v1.0.x 无银行 logo / 信报合一列）
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(cards)")}
+        if "bank_logo" not in cols:
+            conn.execute("ALTER TABLE cards ADD COLUMN bank_logo TEXT NOT NULL DEFAULT ''")
+        if "report_combined" not in cols:
+            conn.execute("ALTER TABLE cards ADD COLUMN report_combined INTEGER NOT NULL DEFAULT 0")
 
 
 @contextmanager

@@ -206,6 +206,19 @@
           <button class="btn btn-ghost btn-sm hidden" id="btn-f-image-clear">移除</button>
         </div>
       </div>
+      <div class="form-row">
+        <label>银行 Logo</label>
+        <div class="upload-row">
+          <span class="icon-preview" id="f-bank-logo-preview"></span>
+          <input type="file" id="f-bank-logo" class="file-input" accept="image/png,image/jpeg,image/webp">
+          <button class="btn btn-ghost btn-sm hidden" id="btn-f-bank-logo-clear">移除</button>
+        </div>
+        <div class="form-hint">不传则用银行名首字生成色块；仅邮件提醒中使用</div>
+      </div>
+      <div class="form-row">
+        <label>信报合一</label>
+        <div class="upload-row"><input type="checkbox" id="f-combined"><span>同银行多卡在邮件提醒中合并为一组</span></div>
+      </div>
       <div class="form-row"><label>备注</label><input class="input" id="f-notes" maxlength="200" placeholder="尾号、卡种等，选填"></div>
     </div>
     <div class="modal-foot">
@@ -215,6 +228,6 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="/assets/app.js?v=1.0.0"></script>
+  <script src="/assets/app.js?v=1.1.0"></script>
 </body>
 </html>
