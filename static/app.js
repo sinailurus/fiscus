@@ -147,8 +147,34 @@ function renderCards() {
   const cards = [...(state.overview?.cards || [])].sort((a, b) =>
     (a.bill_paid - b.bill_paid) || (a.next_due_days - b.next_due_days));
   const urgent = state.settings?.urgent_days || 3;
+  renderCardTable(cards, urgent);
   renderCardList(cards, urgent);
   renderCardWallet(cards, urgent);
+}
+/* 桌面表格视图（照抄 SubDeck subs-table 结构与交互） */
+function renderCardTable(cards, urgent) {
+  const tb = $("#cards-tbody");
+  if (!tb) return;
+  tb.innerHTML = cards.map((c) => `
+    <tr data-id="${c.id}">
+      <td><div class="sub-name">
+        <span class="card-avatar" style="background:${esc(c.color)}">${c.image_url ? `<img src="${esc(c.image_url)}" alt="">` : esc(c.name.charAt(0))}</span>
+        <span class="n">${esc(c.name)}${c.bank ? ` · ${esc(bankDisplay(c.bank))}` : ""}</span>
+      </div></td>
+      <td class="ta-r">${c.bill_paid ? "已还清" : amountText(c)}</td>
+      <td>每月 ${c.repay_day} 号 · ${dueBadge(c.next_due_days, c.bill_paid, urgent)}</td>
+      <td>${esc(bankDisplay(c.bank) || "—")}</td>
+      <td>${c.bill_paid ? `<span class="badge badge-ok">已还</span>` : `<span class="badge badge-blue">未还</span>`}</td>
+      <td class="ta-r"><button class="icon-btn row-edit" data-id="${c.id}" title="编辑"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button></td>
+    </tr>`).join("");
+  $$("#cards-tbody tr").forEach((tr) => {
+    tr.addEventListener("click", (e) => {
+      if (e.target.closest(".row-edit")) return;
+      openDetail(+tr.dataset.id);
+    });
+  });
+  $$("#cards-tbody .row-edit").forEach((el) =>
+    el.addEventListener("click", () => openCardModal(+el.dataset.id)));
 }
 function renderCardList(cards, urgent) {
   const box = $("#card-list");
@@ -992,7 +1018,7 @@ function fillSettings() {
   document.querySelectorAll('input[name="set-skin"]').forEach((r) => r.checked = r.value === (s.skin || "glass"));
   if (state.me?.logged_in) updateBackupRollback();
   renderBankNameRows(bankNameMap());
-  $("#set-notify-on").setAttribute("aria-pressed", s.notify_enabled ? "true" : "false");
+  $("#set-notify-on").checked = !!s.notify_enabled;
   $("#set-notify-emails").value = s.notify_emails || "";
   $("#set-lead").value = s.notify_lead_days ?? 3;
   $("#set-hour").value = s.notify_hour ?? 8;
@@ -1061,14 +1087,10 @@ $("#btn-clear-icon")?.addEventListener("click", async () => {
   applyBrand(); fillSettings();
   toast("已恢复默认图标");
 });
-$("#set-notify-on")?.addEventListener("click", () => {
-  const el = $("#set-notify-on");
-  el.setAttribute("aria-pressed", el.getAttribute("aria-pressed") === "true" ? "false" : "true");
-});
 $("#btn-save-notify")?.addEventListener("click", async () => {
   try {
     await api("/api/settings", { method: "PUT", body: {
-      notify_enabled: $("#set-notify-on").getAttribute("aria-pressed") === "true",
+      notify_enabled: $("#set-notify-on").checked,
       notify_emails: $("#set-notify-emails").value,
       notify_lead_days: +$("#set-lead").value,
       notify_hour: +$("#set-hour").value,
@@ -1104,13 +1126,14 @@ $("#btn-logout")?.addEventListener("click", async () => {
   location.reload();
 });
 
-/* ---------------------------------------------------------------- Tab 切换 */
-$$(".tab-item").forEach((el) =>
+/* ---------------------------------------------------------------- Tab 切换（底部栏 + 顶栏 topnav 共用，照 SubDeck data-nav 模式） */
+$$(".tab-item, .topnav .nav-btn").forEach((el) =>
   el.addEventListener("click", async () => {
     const tab = el.dataset.tab;
     state.tab = tab;
     state.walletOpenId = null;      // 离开卡包即收起展开态
-    $$(".tab-item").forEach((b) => b.classList.toggle("active", b === el));
+    $$(".tab-item, .topnav .nav-btn").forEach((b) =>
+      b.classList.toggle("active", b.dataset.tab === tab));
     ["cards", "todo", "settings"].forEach((t) =>
       $(`#tab-${t}`).classList.toggle("hidden", t !== tab));
     if (tab === "todo") await refreshOverview();

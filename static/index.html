@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.11">
+  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.12">
   <title>Fiscus</title>
 </head>
 <body>
@@ -41,6 +41,11 @@
           <span class="brand-mark" id="brand-mark">F</span>
           <span class="brand-name" id="brand-name">Fiscus</span>
         </div>
+        <nav class="topnav" aria-label="主导航">
+          <button class="nav-btn" data-tab="cards">卡片</button>
+          <button class="nav-btn" data-tab="todo">待办</button>
+          <button class="nav-btn" data-tab="settings">设置</button>
+        </nav>
         <div class="topbar-actions">
           <button id="btn-theme" class="icon-btn" title="切换深浅色" aria-label="切换深浅色">
             <svg class="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -70,6 +75,17 @@
             <button class="seg-btn" data-view="wallet">卡包</button>
           </div>
           <button class="btn btn-primary btn-sm" id="btn-add-card">＋ 添加卡片</button>
+        </div>
+
+        <!-- 表格视图（桌面 ≥1092，照抄 SubDeck subs-table） -->
+        <div id="cards-table-wrap" class="panel table-wrap">
+          <table class="subs-table" id="cards-table">
+            <thead><tr>
+              <th>卡片</th><th class="ta-r">本期金额</th><th>还款日</th>
+              <th>银行</th><th>状态</th><th class="ta-r">操作</th>
+            </tr></thead>
+            <tbody id="cards-tbody"></tbody>
+          </table>
         </div>
 
         <!-- 列表视图 -->
@@ -200,10 +216,7 @@
 
         <div class="settings-group" id="sett-notify">
           <div class="settings-title">邮箱提醒</div>
-          <div class="form-row switch-row">
-            <label>启用邮件提醒</label>
-            <button class="switch" id="set-notify-on" aria-pressed="false"><span class="knob"></span></button>
-          </div>
+          <label class="check-row"><input type="checkbox" id="set-notify-on"> 启用邮件提醒</label>
           <div class="form-row"><label>收件邮箱</label><input class="input" id="set-notify-emails" placeholder="多个邮箱用逗号分隔"></div>
           <div class="form-row"><label>提前提醒</label>
             <div class="inline-inputs"><input type="number" class="input sm" id="set-lead" min="1" max="30" value="3"><span class="unit">天 · 每日</span>
@@ -336,6 +349,6 @@
       </div>
     </div>
   </div>
-  <script src="/assets/app.js?v=1.1.0-beta.11"></script>
+  <script src="/assets/app.js?v=1.1.0-beta.12"></script>
 </body>
 </html>
