@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from . import auth, mailer, reminders
 from .db import MEDIA_DIR, db, get_setting, init_db, set_setting
 
-APP_VERSION = "1.1.0-beta.16"
+APP_VERSION = "1.1.0"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 
 CARD_IMAGE_RE = re.compile(r"^card_\d+\.(png|jpg|webp)$")
@@ -1066,7 +1066,7 @@ def smtp_help():
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    # 版本戳注入（照抄 SubDeck v1.6.13）：HTML 里写死的 ?v= 会被替换为当前 APP_VERSION，
+    # 版本戳注入（照抄 SubDeck v1.6.13）：HTML 里的 ?v=xxx 统一替换为当前 APP_VERSION，
     # 前端资源更新必须换戳，否则浏览器缓存让更新假性失效
     html = Path(os.path.join(STATIC_DIR, "index.html")).read_text(encoding="utf-8")
-    return HTMLResponse(content=html.replace("?v=", f"?v={APP_VERSION}"), headers={"Cache-Control": "no-cache"})
+    return HTMLResponse(content=re.sub(r"\?v=[\w.\-]+", f"?v={APP_VERSION}", html), headers={"Cache-Control": "no-cache"})

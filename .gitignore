@@ -4,3 +4,4 @@ __pycache__/
 tests/*.png
 nohup.out
 .env
+/fiscus.ini

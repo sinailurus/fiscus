@@ -642,6 +642,9 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .form-tip { font-size: 12px; color: var(--text-3); margin-top: 10px; }
 .about-line { font-size: 13px; color: var(--text-2); }
 .about-line.sub { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+/* 关于页链接接主题变量（硬规则：不用浏览器默认蓝） */
+.about-line a { color: var(--accent); text-decoration: none; }
+.about-line a:hover { text-decoration: underline; }
 
 /* ============ 弹窗 / Toast ============ */
 /* 弹窗体系（照抄 SubDeck）：mask 底部对齐 + modal 底部上弹，桌面媒体查询改居中 */
