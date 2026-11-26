@@ -218,6 +218,8 @@ function renderCardWallet(cards, urgent) {
             <div class="wip-item"><span class="wip-k">银行</span><span class="wip-v">${esc(bankDisplay(openCard.bank) || "—")}</span></div>
             <div class="wip-item"><span class="wip-k">还款日</span><span class="wip-v">每月 ${openCard.repay_day} 号 · ${openCard.bill_paid ? "已还" : `${openCard.next_due_days} 天后`}</span></div>
             <div class="wip-item"><span class="wip-k">账单日</span><span class="wip-v">${openCard.bill_day ? `每月 ${openCard.bill_day} 号` : "未填"}</span></div>
+            <div class="wip-item"><span class="wip-k">卡组织</span><span class="wip-v">${openCard.network ? `<span class="wip-tag">${esc(openCard.network)}</span>` : "—"}</span></div>
+            <div class="wip-item"><span class="wip-k">等级</span><span class="wip-v">${openCard.level ? `<span class="wip-tag">${esc(openCard.level)}</span>` : "—"}</span></div>
             <div class="wip-item"><span class="wip-k">额度</span><span class="wip-v">${openCard.limit_amount ? `¥${fmtMoney(openCard.limit_amount)}` : "—"}</span></div>
             <div class="wip-item"><span class="wip-k">备注</span><span class="wip-v">${esc(openCard.notes || "—")}</span></div>
           </div>
@@ -541,9 +543,9 @@ function todoItemHTML(c, urgent, extraBadge) {
   return `
     <div class="swipe-wrap">
       <div class="todo-actions">
-        <button class="ta-btn ta-paid" data-id="${c.id}">${c.bill_paid ? "撤销" : "已还"}</button>
-        <button class="ta-btn ta-amount" data-id="${c.id}">金额</button>
-        <button class="ta-btn ta-edit" data-id="${c.id}">编辑</button>
+        <button class="ta-btn ta-paid" data-id="${c.id}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>${c.bill_paid ? "撤销" : "已还"}</button>
+        <button class="ta-btn ta-amount" data-id="${c.id}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>金额</button>
+        <button class="ta-btn ta-edit" data-id="${c.id}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>编辑</button>
       </div>
       <div class="todo-item ${c.bill_paid ? "done" : ""}" data-id="${c.id}">
         <button class="todo-check" title="${c.bill_paid ? "撤销已还" : "标记已还"}">✓</button>
@@ -691,8 +693,8 @@ function renderTodo() {
   initTodoSwipe();
 }
 
-/* 待办条目右滑操作（SubDeck 左滑骨架改向）：方向锁防误滚、半程吸附、单条互斥、点空白收回 */
-const TODO_SWIPE_W = 200;
+/* 待办条目左滑操作（与 SubDeck 同方向）：方向锁防误滚、半程吸附、单条互斥、点空白收回 */
+const TODO_SWIPE_W = 216;
 function closeTodoSwipe(except) {
   $$("#todo-sections .swipe-wrap.open").forEach((w) => {
     if (w !== except) w.classList.remove("open");
@@ -723,8 +725,8 @@ function initTodoSwipe() {
     }
     if (!horizontal) return;                              // 纵向手势交还浏览器滚动
     if (e.cancelable) e.preventDefault();
-    const base = startOpen ? TODO_SWIPE_W : 0;
-    const x = Math.min(TODO_SWIPE_W, Math.max(0, base + dx));
+    const base = startOpen ? -TODO_SWIPE_W : 0;
+    const x = Math.min(0, Math.max(-TODO_SWIPE_W, base + dx));
     cardEl.style.transform = `translateX(${x}px)`;
   }, { passive: false });
   sections.addEventListener("touchend", () => {
@@ -733,8 +735,8 @@ function initTodoSwipe() {
     cardEl.style.transition = "";
     wrapEl.classList.remove("dragging");
     if (horizontal === null) return;                      // 纯点击，无位移
-    const base = startOpen ? TODO_SWIPE_W : 0;
-    wrapEl.classList.toggle("open", base + dx > TODO_SWIPE_W / 2);
+    const base = startOpen ? -TODO_SWIPE_W : 0;
+    wrapEl.classList.toggle("open", base + dx < -TODO_SWIPE_W / 2);
     cardEl.style.transform = "";
     horizontal = null;
   });
@@ -981,6 +983,12 @@ function fillSettings() {
   $("#icon-preview").innerHTML = s.brand_icon ? `<img src="/api/brand/icon?v=${Date.now() % 1e7}">` : "F";
   $("#set-bg-select").value = s.bg_image?.startsWith("preset:") ? s.bg_image : (s.bg_image ? "upload:" : "");
   $("#set-bg-mask").value = s.bg_mask ?? 35;
+  $("#set-login-title").value = s.login_title || "";
+  $("#set-login-welcome").value = s.login_welcome || "";
+  $("#set-loginbg-select").value = s.login_bg ? "upload:" : "";
+  $("#set-loginbg-btn").classList.toggle("hidden", !s.login_bg);
+  $("#set-loginbg-name").textContent = s.login_bg ? "已上传" : "未选择";
+  $("#set-loginbg-mask").value = s.login_bg_mask ?? 45;
   document.querySelectorAll('input[name="set-skin"]').forEach((r) => r.checked = r.value === (s.skin || "glass"));
   if (state.me?.logged_in) updateBackupRollback();
   renderBankNameRows(bankNameMap());
@@ -998,6 +1006,14 @@ function fillSettings() {
 $("#set-bg-select")?.addEventListener("change", () => {
   $("#set-bg-file-btn").classList.toggle("hidden", $("#set-bg-select").value !== "upload:");
 });
+$("#set-loginbg-select")?.addEventListener("change", () => {
+  $("#set-loginbg-btn").classList.toggle("hidden", $("#set-loginbg-select").value !== "upload:");
+});
+$("#set-loginbg-file")?.addEventListener("change", () => {
+  const f = $("#set-loginbg-file").files[0];
+  $("#set-loginbg-name").textContent = f ? f.name : "未选择";
+});
+$("#btn-login-title-reset")?.addEventListener("click", () => { $("#set-login-title").value = ""; });
 $("#set-icon")?.addEventListener("change", () => {
   const f = $("#set-icon").files[0];
   $("#set-icon-name").textContent = f ? f.name : "未选择";
@@ -1009,9 +1025,14 @@ $("#btn-save-brand")?.addEventListener("click", async () => {
       theme_color: readHex($("#set-color-hex"), ""),
       bg_mask: +$("#set-bg-mask").value,
       skin: document.querySelector('input[name="set-skin"]:checked')?.value || "glass",
+      login_title: $("#set-login-title").value.trim(),
+      login_welcome: $("#set-login-welcome").value.trim(),
+      login_bg_mask: +$("#set-loginbg-mask").value,
     };
     const sel = $("#set-bg-select").value;
     if (sel !== "upload:") body.bg_image = sel;
+    const lsel = $("#set-loginbg-select").value;
+    if (lsel !== "upload:") body.login_bg = lsel;
     await api("/api/settings", { method: "PUT", body });
     if ($("#set-icon").files[0]) {
       const fd = new FormData();
@@ -1022,6 +1043,11 @@ $("#btn-save-brand")?.addEventListener("click", async () => {
       const fd = new FormData();
       fd.append("file", $("#set-bg-file").files[0]);
       await api("/api/brand/background", { method: "POST", body: fd });
+    }
+    if ($("#set-loginbg-file").files[0] && lsel === "upload:") {
+      const fd = new FormData();
+      fd.append("file", $("#set-loginbg-file").files[0]);
+      await api("/api/brand/login-background", { method: "POST", body: fd });
     }
     state.settings = await api("/api/settings");
     applyBrand();

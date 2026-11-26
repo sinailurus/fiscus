@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.8">
+  <link rel="stylesheet" href="/assets/app.css?v=1.1.0-beta.9">
   <title>Fiscus</title>
 </head>
 <body>
@@ -143,6 +143,33 @@
             </div>
           </div>
           <div class="form-row"><label>遮罩浓度</label><input type="range" id="set-bg-mask" min="0" max="85" value="35"></div>
+          <div class="form-row">
+            <label>登录页标题</label>
+            <div class="color-input-row">
+              <input class="input" id="set-login-title" maxlength="24" placeholder="Fiscus">
+              <button class="btn btn-ghost btn-sm" id="btn-login-title-reset">恢复默认</button>
+            </div>
+          </div>
+          <div class="form-row"><label>登录页欢迎语</label><input class="input" id="set-login-welcome" maxlength="30" placeholder="你的信用卡卡包工作台"></div>
+          <div class="form-row">
+            <label>登录页背景</label>
+            <div class="upload-row">
+              <select class="input" id="set-loginbg-select">
+                <option value="">纯色</option>
+                <option value="upload:">上传自定义…</option>
+              </select>
+              <label class="btn btn-sm file-btn hidden" id="set-loginbg-btn">
+                <svg viewBox="0 0 24 24" width="15" height="15"><path d="M12 16V4m0 0 4 4m-4-4L8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                上传背景图
+                <input type="file" id="set-loginbg-file" accept="image/png,image/jpeg,image/webp" hidden>
+              </label>
+              <span class="file-name" id="set-loginbg-name">未选择</span>
+            </div>
+            <div class="color-input-row">
+              <span class="form-hint" style="margin:0;">遮罩浓度</span>
+              <input type="range" id="set-loginbg-mask" min="0" max="85" value="45" style="flex:1;">
+            </div>
+          </div>
           <button class="btn btn-primary" id="btn-save-brand">保存界面设置</button>
         </div>
 
@@ -191,7 +218,7 @@
           <div class="help-link">不会获取授权码？<a href="/help/smtp" target="_blank">查看授权码教程</a></div>
           <div class="btn-row">
             <button class="btn btn-primary" id="btn-save-notify">保存并启用</button>
-            <button class="btn btn-ghost" id="btn-test-notify">发送测试邮件</button>
+            <button class="btn" id="btn-test-notify">发送测试邮件</button>
           </div>
           <div class="form-tip" id="notify-tip">标记已还的账单当期立即停止提醒。</div>
         </div>
@@ -307,6 +334,6 @@
       </div>
     </div>
   </div>
-  <script src="/assets/app.js?v=1.1.0-beta.8"></script>
+  <script src="/assets/app.js?v=1.1.0-beta.9"></script>
 </body>
 </html>

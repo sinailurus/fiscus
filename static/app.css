@@ -155,9 +155,16 @@ a { color: var(--accent); text-decoration: none; }
 }
 .login-card {
   position: relative; z-index: 1; width: 100%; max-width: 340px;
-  background: var(--panel); border-radius: 20px; padding: 32px 26px; box-shadow: var(--shadow);
+  background: var(--panel); border-radius: 18px; padding: 32px 26px; box-shadow: var(--shadow);
   text-align: center;
+  display: flex; flex-direction: column; gap: 12px;   /* SubDeck 同款：元素间自动间距，杜绝拥挤 */
 }
+.login-card .login-title { font-size: 22px; font-weight: 700; }
+.login-card .login-welcome { font-size: 13px; color: var(--text-2); }
+.login-card .login-logo { margin: 0 auto; }
+.login-card input[type="password"] { padding: 11px 13px; border-radius: 10px; font-size: 15px; }
+.login-card .btn { margin-top: 2px; }
+.login-error { color: var(--danger); font-size: 13px; margin: 0; }
 .login-logo {
   width: 60px; height: 60px; margin: 0 auto 14px; border-radius: 18px;
   background: var(--accent); color: #fff; font-size: 28px; font-weight: 600;
@@ -204,7 +211,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 [data-theme="dark"] .app-bg::after { background: rgba(20, 22, 28, var(--app-mask, .45)); }
 .app-main {
   position: relative; z-index: 1; max-width: 860px; margin: 0 auto;
-  padding: 0 16px calc(var(--tabbar-h) + 24px);
+  padding: 14px 16px calc(var(--tabbar-h) + 24px);
 }
 @media (min-width: 760px) {
   .app-main { padding-left: 76px; padding-bottom: 32px; }
@@ -327,6 +334,14 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .wip-bill-amount.empty { color: var(--text-3, #98a2b3); font-weight: 500; }
 .wip-bill-amount.paid { color: var(--ok, #2e9e6b); }
 .wip-item { min-width: 0; }
+/* 卡组织/等级胶囊（SubDeck paused-tag 设计语言） */
+.wip-tag {
+  display: inline-block; font-size: 12px; font-weight: 500;
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 3px 10px; background: var(--panel-2, var(--panel)); color: var(--text);
+  white-space: nowrap;
+}
+.wip-item .wip-v { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .wip-k { display: block; font-size: 11px; color: var(--text-3, #98a2b3); margin-bottom: 2px; }
 .wip-v { display: block; font-size: 13px; color: var(--text); font-weight: 500;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -393,11 +408,21 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .date-cell.has-event .d2 { color: var(--accent); }
 .date-cell.is-urgent { border-color: var(--warn); }
 .date-cell.is-urgent .d2 { color: var(--warn); }
-.todo-section { margin-bottom: 18px; }
+/* 信息块分界（照大厂分组卡做法：每块独立面板容器 + 组头，块间距拉开） */
+.todo-section {
+  background: var(--panel); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 20px; box-shadow: var(--shadow);
+}
+.todo-section .todo-item { box-shadow: none; background: var(--panel-2, var(--panel)); }
 .todo-title {
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 14px; font-weight: 600; margin-bottom: 8px;
+  font-size: 14px; font-weight: 600; margin-bottom: 10px;
 }
+.todo-title::before {
+  content: ""; width: 4px; height: 14px; border-radius: 2px;
+  background: var(--accent); margin-right: 8px;
+}
+.todo-title > span:first-child { display: flex; align-items: center; }
 .todo-count { font-size: 12px; font-weight: 400; color: var(--text-2); }
 .todo-count b.ok { color: var(--ok); }
 .todo-item {
@@ -407,32 +432,35 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 }
 .todo-item.done { opacity: .62; }
 
-/* ---- 待办条目右滑操作（手机）+ 桌面悬浮按钮 ---- */
+/* ---- 待办条目左滑操作（与 SubDeck 同方向同配色）+ 桌面悬浮按钮 ---- */
 .swipe-wrap { position: relative; }
 .todo-item {
   position: relative; z-index: 1;
   transition: transform .25s ease; touch-action: pan-y;
 }
 .swipe-wrap.dragging .todo-item { transition: none; }
-.swipe-wrap.open .todo-item { transform: translateX(200px); box-shadow: 0 2px 8px rgba(0, 0, 0, .10); }
+.swipe-wrap.open .todo-item { transform: translateX(-216px); box-shadow: 0 2px 8px rgba(0, 0, 0, .10); }
 .todo-actions {
-  position: absolute; top: 0; left: 6px; bottom: 0; display: flex;
+  position: absolute; top: 0; right: 6px; bottom: 0; display: flex;
   opacity: 0; transition: opacity .15s ease;
-  border-radius: var(--radius); overflow: hidden;
+  border-radius: 14px; overflow: hidden;
   backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15);
   border: 1px solid rgba(255, 255, 255, .10);
   box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
 }
 [data-theme="light"] .todo-actions { border-color: rgba(0, 0, 0, .08); box-shadow: 0 2px 10px rgba(0, 0, 0, .08); }
 .swipe-wrap.open .todo-actions { opacity: 1; }
+/* 三按钮配色照抄 SubDeck swipe-btn：color-mix 82% 透明实底 */
 .ta-btn {
-  width: 62px; border: none; background: transparent; cursor: pointer;
-  color: #fff; font-size: 13px; font-weight: 600;
-  display: flex; align-items: center; justify-content: center;
+  width: 72px; border: none; background: transparent; cursor: pointer;
+  color: #fff; font-size: 12px; font-weight: 500;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
 }
-.ta-paid { background: rgba(97, 171, 131, .85); }
-.ta-amount { background: rgba(92, 157, 255, .85); }
-.ta-edit { background: rgba(171, 99, 246, .82); }
+.ta-btn svg { width: 20px; height: 20px; }
+.ta-paid { background: color-mix(in srgb, var(--ok, #2e9e6b) 82%, transparent); }
+.ta-amount { background: color-mix(in srgb, #ff9500 82%, transparent); }
+[data-theme="dark"] .ta-amount { background: color-mix(in srgb, #ff9f0a 82%, transparent); }
+.ta-edit { background: color-mix(in srgb, var(--accent) 82%, transparent); }
 .todo-hover-actions { display: none; }
 @media (min-width: 760px) {
   .todo-actions { display: none; }        /* 桌面：悬浮按钮替代滑动手势 */
@@ -451,10 +479,14 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 }
 .todo-check {
   width: 26px; height: 26px; border-radius: 50%; flex: none;
-  border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center;
-  color: transparent; font-size: 14px; transition: all .12s;
+  border: 2px solid var(--text-2); background: var(--panel);
+  display: flex; align-items: center; justify-content: center;
+  color: transparent; font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: all .12s;
 }
-.todo-item.done .todo-check { background: var(--ok); border-color: var(--ok); color: #fff; }
+.todo-item.done .todo-check { background: var(--ok, #2e9e6b); border-color: var(--ok, #2e9e6b); color: #fff; }
+.todo-check:hover { border-color: var(--ok, #2e9e6b); color: var(--ok, #2e9e6b); }
+.todo-item.done .todo-check:hover { background: transparent; color: var(--ok, #2e9e6b); }
 .todo-main { flex: 1; min-width: 0; }
 .todo-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .todo-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
