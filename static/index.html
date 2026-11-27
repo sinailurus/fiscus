@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.2.1-beta.7">
+  <link rel="stylesheet" href="/assets/app.css?v=1.2.1-beta.8">
   <title>Fiscus</title>
 </head>
 <body>
@@ -220,23 +220,42 @@
           </div>
           <div class="form-row"><label>登录页欢迎语</label><input class="input" id="set-login-welcome" maxlength="30" placeholder="你的信用卡卡包工作台"></div>
           <div class="form-row">
-            <label>登录页背景</label>
-            <div class="upload-row">
-              <select class="input" id="set-loginbg-select">
-                <option value="">纯色</option>
-                <option value="upload:">上传自定义…</option>
-              </select>
-              <label class="btn btn-sm file-btn hidden" id="set-loginbg-btn">
-                <svg viewBox="0 0 24 24" width="15" height="15"><path d="M12 16V4m0 0 4 4m-4-4L8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                上传背景图
-                <input type="file" id="set-loginbg-file" accept="image/png,image/jpeg,image/webp" hidden>
+            <label>登录页背景（主题渐变 / 内置预设 / 自定义图片，预设与主应用共用）</label>
+            <div class="bg-picker" id="login-bg-picker">
+              <button type="button" class="bg-card bg-grad" data-bg="" title="主题渐变（默认）"><span class="bg-name">主题渐变</span></button>
+              <button type="button" class="bg-card bg-aurora" data-bg="preset:aurora" title="极光"><span class="bg-name">极光</span></button>
+              <button type="button" class="bg-card bg-candy" data-bg="preset:candy" title="糖果"><span class="bg-name">糖果</span></button>
+              <button type="button" class="bg-card bg-sunset" data-bg="preset:sunset" title="日落"><span class="bg-name">日落</span></button>
+              <label class="bg-card bg-upload" title="上传自定义图片">
+                <input type="file" id="set-loginbg-file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" hidden>
+                <span class="bg-name">自定义</span>
               </label>
-              <span class="file-name" id="set-loginbg-name">未选择</span>
+              <button type="button" class="bg-card bg-none" data-bg="none" title="无背景"><span class="bg-name">无背景</span></button>
             </div>
-            <div class="color-input-row">
-              <span class="form-hint" style="margin:0;">遮罩浓度</span>
-              <input type="range" id="set-loginbg-mask" min="0" max="85" value="45" style="flex:1;">
+            <div class="upload-line hidden" id="login-bg-upload-line">
+              <span class="muted small" id="login-bg-upload-name">—</span>
+              <button type="button" id="btn-login-bg-clear" class="btn btn-ghost btn-sm danger-text">删除图片</button>
             </div>
+            <div class="mask-row">
+              <label class="muted small">图片遮罩</label>
+              <input type="range" id="set-loginbg-mask" min="0" max="80" step="5">
+              <span class="muted small" id="set-loginbg-mask-value">45%</span>
+            </div>
+            <p class="muted small">遮罩压深背景图，保证卡片文字可读；仅自定义图片时有效。</p>
+          </div>
+          <div class="form-row">
+            <label>登录页图标</label>
+            <div class="upload-row">
+              <div class="brand-icon-preview brand-mark" id="login-icon-preview">F</div>
+              <div class="logo-actions">
+                <label class="btn btn-ghost btn-sm">
+                  上传/替换
+                  <input type="file" id="set-loginicon-file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" hidden>
+                </label>
+                <button type="button" id="btn-loginicon-clear" class="btn btn-ghost btn-sm">删除，恢复跟随</button>
+              </div>
+            </div>
+            <p class="form-hint">优先级：登录页图标 → 品牌图标 → 标题首字母。方形图 ≤2MB。</p>
           </div>
         </div>
 
@@ -442,6 +461,6 @@
       </div>
     </div>
   </div>
-  <script src="/assets/app.js?v=1.2.1-beta.7"></script>
+  <script src="/assets/app.js?v=1.2.1-beta.8"></script>
 </body>
 </html>

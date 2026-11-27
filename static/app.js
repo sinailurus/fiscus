@@ -83,7 +83,10 @@ function showLogin() {
     $("#login-welcome").textContent = b.login_welcome || b.login_title || "你的信用卡卡包工作台";
     if (b.theme_color) applyAccent(b.theme_color);
     const logo = $("#login-logo");
-    logo.innerHTML = b.icon_ver ? `<img src="/api/brand/login-icon?v=${Date.now() % 1e7}">` : (b.app_name || "F").charAt(0).toUpperCase();
+    /* 图标回落链（照抄 SubDeck 优先级）：登录页图标 → 品牌图标 → 标题首字母 */
+    if (b.login_icon) logo.innerHTML = `<img src="/api/brand/login-icon?v=${Date.now() % 1e7}" alt="">`;
+    else if (b.icon_ver) logo.innerHTML = `<img src="/api/brand/icon?v=${Date.now() % 1e7}" alt="">`;
+    else logo.textContent = (b.app_name || "F").charAt(0).toUpperCase();
     if (b.login_bg && b.login_bg !== "none") {
       const wrap = $(".login-wrap");
       const layer = document.createElement("div");
@@ -1438,10 +1441,7 @@ function fillSettings() {
   $("#set-bg-mask-value").textContent = `${s.bg_mask ?? 35}%`;
   $("#set-login-title").value = s.login_title || "";
   $("#set-login-welcome").value = s.login_welcome || "";
-  $("#set-loginbg-select").value = s.login_bg ? "upload:" : "";
-  $("#set-loginbg-btn").classList.toggle("hidden", !s.login_bg);
-  $("#set-loginbg-name").textContent = s.login_bg ? "已上传" : "未选择";
-  $("#set-loginbg-mask").value = s.login_bg_mask ?? 45;
+  renderLoginControls(s);
   document.querySelectorAll('input[name="set-skin"]').forEach((r) => r.checked = r.value === (s.skin || "glass"));
   if (state.me?.logged_in) updateBackupRollback();
   renderBankNameRows(bankNameMap());
@@ -1514,7 +1514,76 @@ document.querySelectorAll('input[name="set-skin"]').forEach((r) => r.addEventLis
 $("#set-login-title")?.addEventListener("change", () => saveAppearance({ login_title: $("#set-login-title").value.trim() }, "登录页标题已保存"));
 $("#btn-login-title-reset")?.addEventListener("click", () => saveAppearance({ login_title: "" }, "已恢复默认"));
 $("#set-login-welcome")?.addEventListener("change", () => saveAppearance({ login_welcome: $("#set-login-welcome").value.trim() }, "登录页欢迎语已保存"));
-$("#set-loginbg-mask")?.addEventListener("change", () => saveAppearance({ login_bg_mask: +$("#set-loginbg-mask").value }, "已保存"));
+/* ---------------------------------------------------------------- 登录页设置控件（照抄 SubDeck renderLoginControls：
+   背景六宫格选中态 + 上传行 + 遮罩滑杆 + 登录页图标预览，即改即存风格） */
+function renderLoginControls(s) {
+  const bg = s.login_bg || "";
+  const isUpload = bg && !bg.startsWith("preset:") && bg !== "none";
+  document.querySelectorAll("#login-bg-picker .bg-card").forEach((b) => {
+    if (b.classList.contains("bg-upload")) return;
+    b.classList.toggle("on", !isUpload && (b.dataset.bg || "") === bg);   /* 自定义上传后由 upload-line 呈现选中态 */
+  });
+  $("#login-bg-upload-line").classList.toggle("hidden", !isUpload);
+  if (isUpload) $("#login-bg-upload-name").textContent = `已上传：${bg}`;
+  $("#set-loginbg-mask").value = s.login_bg_mask ?? 45;
+  $("#set-loginbg-mask-value").textContent = `${s.login_bg_mask ?? 45}%`;
+  const pv = $("#login-icon-preview");
+  if (s.login_icon) pv.innerHTML = `<img src="/api/brand/login-icon?v=${Date.now() % 1e7}" alt="">`;
+  else pv.textContent = "F";
+}
+$("#login-bg-picker")?.addEventListener("click", (e) => {
+  const b = e.target.closest(".bg-card[data-bg]");
+  if (!b) return;   /* 点「自定义」走文件选择，不落 data-bg */
+  saveAppearance({ login_bg: b.dataset.bg || "" }, "登录页背景已更新，退出登录即可查看");
+});
+$("#set-loginbg-mask")?.addEventListener("input", () => {
+  $("#set-loginbg-mask-value").textContent = `${$("#set-loginbg-mask").value}%`;
+});
+$("#set-loginbg-mask")?.addEventListener("change", () => saveAppearance({ login_bg_mask: +$("#set-loginbg-mask").value }, "遮罩已保存"));
+/* 自定义登录页背景上传 / 删除 */
+$("#set-loginbg-file")?.addEventListener("change", async () => {
+  const f = $("#set-loginbg-file").files[0];
+  if (!f) return;
+  try {
+    const fd = new FormData();
+    fd.append("file", f);
+    await api("/api/brand/login-background", { method: "POST", body: fd });
+    state.settings = await api("/api/settings");   /* 上传接口已写入设置，前端只同步状态 */
+    fillSettings();
+    toast("登录页背景已更新，退出登录即可查看");
+  } catch (ex) { toast("上传失败：" + ex.message); }
+  $("#set-loginbg-file").value = "";
+});
+$("#btn-login-bg-clear")?.addEventListener("click", async () => {
+  try {
+    await api("/api/brand/login-background", { method: "DELETE" });
+    state.settings.login_bg = "";
+    fillSettings();
+    toast("已删除自定义背景，恢复主题渐变");
+  } catch (ex) { toast("删除失败：" + ex.message); }
+});
+/* 登录页图标上传 / 删除（回落：品牌图标 → 标题首字母） */
+$("#set-loginicon-file")?.addEventListener("change", async () => {
+  const f = $("#set-loginicon-file").files[0];
+  if (!f) return;
+  try {
+    const fd = new FormData();
+    fd.append("file", f);
+    await api("/api/brand/login-icon", { method: "POST", body: fd });
+    state.settings = await api("/api/settings");
+    fillSettings();
+    toast("登录页图标已更新，退出登录即可查看");
+  } catch (ex) { toast("上传失败：" + ex.message); }
+  $("#set-loginicon-file").value = "";
+});
+$("#btn-loginicon-clear")?.addEventListener("click", async () => {
+  try {
+    await api("/api/brand/login-icon", { method: "DELETE" });
+    state.settings = await api("/api/settings");
+    fillSettings();
+    toast("已删除登录页图标，恢复跟随品牌图标 / 首字母");
+  } catch (ex) { toast("删除失败：" + ex.message); }
+});
 $("#set-icon")?.addEventListener("change", async () => {
   const f = $("#set-icon").files[0];
   if (!f) return;
@@ -1526,21 +1595,6 @@ $("#set-icon")?.addEventListener("change", async () => {
     fillSettings();
     applyBrand();
     toast("图标已上传并生效");
-  } catch (ex) { toast(ex.message); }
-});
-$("#set-loginbg-select")?.addEventListener("change", () => {
-  $("#set-loginbg-btn").classList.toggle("hidden", $("#set-loginbg-select").value !== "upload:");
-});
-$("#set-loginbg-file")?.addEventListener("change", async () => {
-  const f = $("#set-loginbg-file").files[0];
-  if (!f) return;
-  try {
-    const fd = new FormData();
-    fd.append("file", f);
-    await api("/api/brand/login-background", { method: "POST", body: fd });
-    state.settings = await api("/api/settings");
-    fillSettings();
-    toast("登录页背景已上传并生效");
   } catch (ex) { toast(ex.message); }
 });
 $("#btn-clear-icon")?.addEventListener("click", async () => {

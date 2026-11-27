@@ -68,6 +68,33 @@ a { color: var(--accent); text-decoration: none; }
 .i-sun, [data-theme="dark"] .i-moon { display: none; }
 [data-theme="dark"] .i-sun { display: block; }
 .muted { color: var(--text-2); }
+/* 登录页背景选择器（照抄 SubDeck bg-picker：六宫格缩略卡片 + 上传行 + 遮罩行） */
+.bg-picker { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+@media (max-width: 560px) { .bg-picker { grid-template-columns: repeat(3, 1fr); } }
+.bg-card {
+  height: 56px; border-radius: 12px; border: 2px solid var(--line); cursor: pointer;
+  position: relative; overflow: hidden; padding: 0;
+  background-size: cover; background-position: center;
+}
+.bg-card.on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
+.bg-card .bg-name {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 0 4px; text-align: center;
+  font-size: 11px; color: #fff; background: rgba(10, 14, 30, .42);
+}
+.bg-grad { background: linear-gradient(120deg, #1c2748, #2b3a72, var(--accent)); }
+.bg-aurora { background-image: url("/assets/bg/aurora.jpg"); }
+.bg-candy  { background-image: url("/assets/bg/candy.jpg"); }
+.bg-sunset { background-image: url("/assets/bg/sunset.jpg"); }
+.bg-upload { background: linear-gradient(135deg, #232c52, #4a3f8f 55%, #7a5cff); }
+.bg-none { background-image: repeating-linear-gradient(45deg, #f2f4f9 0 6px, #fafbff 6px 12px); }
+.bg-none .bg-name { color: #8a92a6; background: rgba(255, 255, 255, .65); }
+.upload-line {
+  display: flex; align-items: center; gap: 12px; margin-top: 10px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 10px; padding: 9px 14px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.danger-text { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
 .small { font-size: 13px; }
 .input {
   width: 100%; border: 1px solid var(--line); background: var(--panel);

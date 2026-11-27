@@ -295,6 +295,31 @@ with sync_playwright() as p:
     check("返回设置页", not pg.locator("#tab-settings").is_hidden()
           and pg.locator("#tab-smtp-help").is_hidden())
 
+    # 登录页设置（1.2.1-beta.8：照抄 SubDeck 六宫格 + 图标区）
+    pg.click('.tab-item[data-tab="settings"]'); pg.wait_for_timeout(600)
+    check("背景六宫格渲染", pg.locator("#login-bg-picker .bg-card").count() == 6)
+    check("主题渐变默认选中", "on" in (pg.locator('#login-bg-picker [data-bg=""]').get_attribute("class") or ""))
+    pg.click('#login-bg-picker [data-bg="preset:aurora"]')
+    pg.wait_for_timeout(600)
+    saved = pg.evaluate("fetch('/api/settings').then(r => r.json()).then(j => j.login_bg)")
+    check("选预设即存", saved == "preset:aurora", saved)
+    aurora_on = "on" in (pg.locator('#login-bg-picker [data-bg="preset:aurora"]').get_attribute("class") or "")
+    check("预设选中态", aurora_on)
+    pg.click('#login-bg-picker [data-bg="none"]')
+    pg.wait_for_timeout(600)
+    saved2 = pg.evaluate("fetch('/api/settings').then(r => r.json()).then(j => j.login_bg)")
+    check("无背景即存", saved2 == "none", saved2)
+    pg.click('#login-bg-picker [data-bg=""]')
+    pg.wait_for_timeout(600)
+    # 遮罩滑杆带百分比
+    pg.locator("#set-loginbg-mask").scroll_into_view_if_needed()
+    mask_pct = pg.inner_text("#set-loginbg-mask-value")
+    check("遮罩滑杆百分比", mask_pct.endswith("%"), mask_pct)
+    # 登录页图标区（预览 + 两个按钮）
+    check("图标区渲染", pg.locator("#login-icon-preview").count() == 1
+          and pg.locator("#set-loginicon-file").count() == 1
+          and pg.locator("#btn-loginicon-clear").count() == 1)
+
     # 卡面文字亮度自适应（1.2.1-beta.6：亮色卡深字/暗色卡白字）
     pg.evaluate("""async () => {
       await fetch('/api/cards', {method:'POST', headers:{'Content-Type':'application/json'},
