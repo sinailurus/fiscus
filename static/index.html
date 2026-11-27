@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.2.2-beta.1">
+  <link rel="stylesheet" href="/assets/app.css?v=1.2.2-beta.2">
   <title>Fiscus</title>
 </head>
 <body>
@@ -248,11 +248,12 @@
             <div class="upload-row">
               <div class="brand-icon-preview brand-mark" id="login-icon-preview">F</div>
               <div class="logo-actions">
-                <label class="btn btn-ghost btn-sm">
+                <label class="btn btn-sm file-btn">
+                  <svg viewBox="0 0 24 24" width="15" height="15"><path d="M12 16V4m0 0 4 4m-4-4L8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                   上传/替换
                   <input type="file" id="set-loginicon-file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" hidden>
                 </label>
-                <button type="button" id="btn-loginicon-clear" class="btn btn-ghost btn-sm">删除，恢复跟随</button>
+                <button type="button" id="btn-loginicon-clear" class="btn btn-ghost btn-sm danger-text">删除，恢复跟随</button>
               </div>
             </div>
             <p class="form-hint">优先级：登录页图标 → 品牌图标 → 标题首字母。方形图 ≤2MB。</p>
@@ -462,6 +463,6 @@
       </div>
     </div>
   </div>
-  <script src="/assets/app.js?v=1.2.2-beta.1"></script>
+  <script src="/assets/app.js?v=1.2.2-beta.2"></script>
 </body>
 </html>

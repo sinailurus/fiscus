@@ -220,6 +220,11 @@ function walletFaceHTML(c, urgent, plain = false) {
         </div>
         <div class="wallet-badge-row">${badge}</div>
       </div>`;
+  /* 借记卡且有卡面图：完整呈现卡面，不叠大字（Visa 数字卡规范同款，类型看胶囊徽章） */
+  if (c.card_type === "debit" && c.image_url) return `
+    <div class="wallet-face" style="background-color:${esc(c.color)};background-image:url('${esc(c.image_url)}')">
+      ${head}
+    </div>`;
   const foot = c.card_type === "debit"
     ? `<div class="wallet-top">
         <div>
@@ -430,6 +435,17 @@ function sampleFaceImage(c) {
 }
 
 function faceBlock(c) {
+  const debit = c.card_type === "debit";
+  const badge = debit ? debitBadge() : dueBadge(c.next_due_days, c.bill_paid, state.settings?.urgent_days || 3);
+  /* 借记卡且有卡面图：完整呈现卡面图，只保留胶囊徽章标识类型 */
+  const foot = debit && c.image_url ? "" : `
+      <div class="wallet-top">
+        <div>
+          <div class="wallet-due">${debit ? "借记卡" : (c.bill_paid ? "已还清" : amountText(c))}</div>
+          <div class="wallet-sub">${debit ? "无账单无还款" : `每月 ${c.repay_day} 号还款${c.limit_amount ? ` · 额度 ¥${fmtMoney(c.limit_amount)}` : ""}`}</div>
+        </div>
+        <div class="wallet-badge-row">${badge}</div>
+      </div>`;
   return `
   <div class="detail-face" data-card="${c.id}">
     <div class="detail-face-inner" style="background-color:${esc(c.color)};${c.image_url ? `background-image:url('${esc(c.image_url)}')` : ""}">
@@ -438,15 +454,9 @@ function faceBlock(c) {
           <div class="wallet-bank">${esc(c.bank || c.name)}</div>
           <div class="wallet-sub">${esc(c.name)}${c.notes ? ` · ${esc(c.notes)}` : ""}</div>
         </div>
-        ${c.image_url ? "" : '<div class="wallet-chip"></div>'}
+        ${debit ? `<div class="wallet-badge-row">${badge}</div>` : (c.image_url ? "" : '<div class="wallet-chip"></div>')}
       </div>
-      <div class="wallet-top">
-        <div>
-          <div class="wallet-due">${c.card_type === "debit" ? "借记卡" : (c.bill_paid ? "已还清" : amountText(c))}</div>
-          <div class="wallet-sub">${c.card_type === "debit" ? "无账单无还款" : `每月 ${c.repay_day} 号还款${c.limit_amount ? ` · 额度 ¥${fmtMoney(c.limit_amount)}` : ""}`}</div>
-        </div>
-        <div class="wallet-badge-row">${c.card_type === "debit" ? debitBadge() : dueBadge(c.next_due_days, c.bill_paid, state.settings?.urgent_days || 3)}</div>
-      </div>
+      ${foot}
     </div>
   </div>`;
 }
@@ -1387,7 +1397,7 @@ const bankRowHTML = (from = "", to = "") => `
       <input class="input bn-from" placeholder="完整银行名" maxlength="30" value="${esc(from)}">
       <span class="bn-arrow">→</span>
       <input class="input bn-to" placeholder="显示名" maxlength="30" value="${esc(to)}">
-      <button class="icon-btn bn-del" title="删除">×</button>
+      <button class="icon-btn danger bn-del" title="删除">×</button>
     </div>`;
 
 function renderBankNameRows(map) {
