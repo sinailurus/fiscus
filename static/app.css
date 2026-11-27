@@ -42,18 +42,29 @@ input, select { font: inherit; }
 a { color: var(--accent); text-decoration: none; }
 .hidden { display: none !important; }
 
-/* ============ 通用控件 ============ */
+/* ============ 通用控件（实心按钮体系，参照 TA 截图 P1/P2：主=accent 实心白字，
+             次=实心亮面深字；深色模式次钮表面须比背景亮一档，不与背景糊成一片） ============ */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  border-radius: 10px; padding: 9px 16px; font-size: 14px; font-weight: 500;
-  border: 1px solid var(--line); background: var(--card); color: var(--text);
-  cursor: pointer; white-space: nowrap; transition: filter .12s, background .12s;
+  border-radius: 14px; padding: 10px 18px; font-size: 14px; font-weight: 600;
+  border: none; background: color-mix(in srgb, var(--text) 7%, var(--panel)); color: var(--text);
+  cursor: pointer; white-space: nowrap; transition: filter .12s, transform .12s;
+  box-shadow: var(--shadow);
 }
-.btn:active { filter: brightness(.92); }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-.btn-ghost { background: transparent; color: var(--text); border-color: var(--line); }
-.btn-danger { background: transparent; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
-.btn-sm { padding: 5px 12px; font-size: 12.5px; border-radius: 999px; }
+.btn:active { filter: brightness(.92); transform: translateY(1px); }
+/* 主按钮：accent 实心白字 + 品牌色轻投影（P1「保存并启用」同款） */
+.btn-primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #ffffff), var(--accent));
+  color: #fff; font-weight: 700;
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.btn-ghost { background: color-mix(in srgb, var(--text) 7%, var(--panel)); color: var(--text); }
+/* 危险按钮：红淡底实心（深浅色自适应，不与背景融） */
+.btn-danger, .btn.danger-text {
+  background: color-mix(in srgb, var(--danger) 10%, var(--panel));
+  color: var(--danger); font-weight: 600;
+}
+.btn-sm { padding: 6px 13px; font-size: 12.5px; border-radius: 11px; }
 .btn-block { width: 100%; }
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -126,11 +137,12 @@ a { color: var(--accent); text-decoration: none; }
 .radio-pill { position: relative; flex: 1; }
 .radio-pill input { position: absolute; opacity: 0; }
 .radio-pill span {
-  display: block; text-align: center; padding: 8px 10px;
-  border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-size: 13.5px;
-  background: var(--panel); color: var(--text-2);
+  display: block; text-align: center; padding: 8px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border: 1px solid var(--line); border-radius: 12px; cursor: pointer; font-size: 13px;
+  background: color-mix(in srgb, var(--text) 7%, var(--panel)); color: var(--text-2); font-weight: 600;
 }
-.radio-pill input:checked + span { border-color: var(--accent); background: var(--accent-weak); color: var(--accent); font-weight: 600; }
+/* 选中态：accent 实心白字（实心按钮体系，不做描边空心） */
+.radio-pill input:checked + span { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 700; }
 .hex-input { width: 110px; flex: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: .5px; }
 .color-row { display: flex; align-items: center; gap: 12px; }
 /* 表单统一竖排（SubDeck 设计语言）：label 在上，控件与说明在下，左对齐 */
@@ -179,11 +191,9 @@ a { color: var(--accent); text-decoration: none; }
 .mask-row label { font-size: 12.5px; font-weight: 600; white-space: nowrap; }
 .mask-row input[type="range"] { flex: 1; accent-color: var(--accent); }
 .mask-row span { min-width: 38px; text-align: right; font-size: 12.5px; color: var(--text-2); }
-/* 上传钮（file-btn）：accent 弱填充底，与描边钮（ghost）、删除钮（danger）拉开三档视觉差 */
-.file-btn { cursor: pointer;
-  background: var(--accent-weak); border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-  color: var(--accent); font-weight: 600; }
-.file-btn:hover { border-color: var(--accent); filter: brightness(1.04); }
+/* 上传钮（file-btn）：实心次按钮（P2「发送测试邮件」同款），图标随按钮色 */
+.file-btn { cursor: pointer; background: color-mix(in srgb, var(--text) 7%, var(--panel)); }
+.file-btn:hover { filter: brightness(1.05); }
 .file-btn input { display: none; }
 .file-name { font-size: 12px; color: var(--text-3, #98a2b3); max-width: 140px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -683,6 +693,10 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .settings-title { font-weight: 600; margin-bottom: 12px; }
 .form-row > .form-hint { flex-basis: 100%; }   /* 提示文字独占一行，不挤压上传控件 */
 .upload-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* 登录页图标区：图标预览与按钮行垂直居中对齐（修三元素不平行） */
+.logo-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.brand-icon-preview { width: 40px; height: 40px; border-radius: 13px; font-size: 20px; }
+.logo-actions .btn { padding: 10px 14px; font-size: 13px; }   /* 行内按钮加高到与图标等高，顶边平齐 */
 .icon-preview {
   width: 40px; height: 40px; border-radius: 12px; flex: none; overflow: hidden;
   background: var(--accent-weak); color: var(--accent); font-weight: 600;
