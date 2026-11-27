@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from . import auth, mailer, reminders
 from .db import MEDIA_DIR, db, get_setting, init_db, set_setting
 
-APP_VERSION = "1.2.0-beta.1"
+APP_VERSION = "1.2.0-beta.2"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 
 CARD_IMAGE_RE = re.compile(r"^card_\d+\.(png|jpg|webp)$")

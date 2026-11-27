@@ -664,7 +664,7 @@ function renderTodo() {
             <div class="todo-name">${esc(c.name)}</div>
             <div class="todo-sub">年费 ¥${fmtMoney(c.fee.amount)} · ${esc(c.fee.rule_note || "收取中")}${c.fee.target_count ? ` · 还差 ${c.fee.remaining} 笔` : ""}</div>
           </div>
-          <span class="badge ${c.fee.days <= urgent ? "badge-warn" : "badge-blue"}">${c.fee.days} 天后</span>
+          <span class="badge ${c.fee.days < 0 ? "badge-danger" : c.fee.days <= urgent ? "badge-warn" : "badge-blue"}">${c.fee.days < 0 ? `已过期 ${-c.fee.days} 天` : `${c.fee.days} 天后`}</span>
         </div>`).join("") : `<div class="empty-tip">30 天内没有年费事项。</div>`}
     </div>`);
 

@@ -179,6 +179,19 @@ with sync_playwright() as p:
     prev_row = next((r for r in api_prev["cards"] if r["name"] == "建行卡"), None)
     check("补录上月账单生效", prev_row and prev_row["has_bill"] and prev_row["amount"] == 1800,
           str(prev_row))
+    # 逾期锚点（回归：倒计时不许被惰性滚动重置，SubDeck 前期同款教训）
+    ov = pg.evaluate("fetch('/api/overview').then(r => r.json())")
+    ccb = next((c for c in ov["cards"] if c["name"] == "建行卡"), None)
+    check("逾期卡锚定最早未还期", ccb and ccb["next_due_days"] < 0
+          and ccb["next_period"] == prev_ym and ccb["bill_amount"] == 1800,
+          f"days={ccb and ccb['next_due_days']} period={ccb and ccb['next_period']}")
+    check("概览条显示已逾期", "已逾期" in ov["summary"]["nearest"]["text"],
+          str(ov["summary"]["nearest"]))
+    pg.locator('.tab-item[data-tab="todo"]').click()
+    pg.wait_for_timeout(800)
+    check("待办页逾期红徽章", pg.locator('.todo-item', has_text="已过期").count() >= 1)
+    pg.locator('.tab-item[data-tab="bills"]').click()
+    pg.wait_for_timeout(600)
     # 切到上月看行渲染
     pg.click("#bill-prev")
     pg.wait_for_timeout(700)
@@ -227,6 +240,23 @@ with sync_playwright() as p:
     check("切回日期条", pg.is_visible("#todo-datebar-wrap"))
     view_saved = pg.evaluate("localStorage.getItem('fiscus-todo-view')")
     check("月历视图记忆落盘", view_saved == "datebar", view_saved)
+
+    # 逾期账单打卡后倒计时恢复滚动（逾期义务确认了才走）
+    ov2 = pg.evaluate("fetch('/api/overview').then(r => r.json())")
+    ccb2 = next((c for c in ov2["cards"] if c["name"] == "建行卡"), None)
+    if ccb2 and ccb2["next_due_days"] < 0:
+        pg.evaluate("""(c) => fetch(`/api/cards/${c.id}/bill`, {method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({period: c.next_period, paid: true,
+                due_date: c.next_due, amount: c.bill_amount || 0})}).then(r => r.json())""",
+            ccb2)
+        pg.wait_for_timeout(400)
+        ov3 = pg.evaluate("fetch('/api/overview').then(r => r.json())")
+        ccb3 = next((c for c in ov3["cards"] if c["name"] == "建行卡"), None)
+        check("逾期打卡后恢复滚动", ccb3 and ccb3["next_due_days"] > 0,
+              f"days={ccb3 and ccb3['next_due_days']} period={ccb3 and ccb3['next_period']}")
+    else:
+        check("逾期卡打卡后恢复滚动", False, "建行卡未处于逾期态，前置异常")
 
     # 卡包视图点卡 → 展开态（置顶卡 + 基本信息块 + 编辑按钮），点编辑进编辑弹窗
     pg.locator('.tab-item[data-tab="cards"]').click()

@@ -33,13 +33,26 @@ def card_state(conn: sqlite3.Connection, row: sqlite3.Row, base: datetime.date |
     base = base or today()
     card = {k: row[k] for k in CARD_FIELDS}
 
-    # ---- 还款：周期给日期，账单表给金额与已还状态 ----
-    next_due = next_monthly(row["repay_day"], base)
-    period = next_due.isoformat()[:7]                       # 该还款日所属账单期 YYYY-MM
-    bill = conn.execute(
-        "SELECT * FROM bills WHERE card_id=? AND period=?", (row["id"], period)
+    # ---- 还款：有未还账单 → 最早一期未还账单锚定倒计时（SubDeck 前期同款教训：
+    #      不许惰性滚动吞掉逾期义务，过期=负数天，还清才看下个周期）----
+    unpaid = conn.execute(
+        "SELECT * FROM bills WHERE card_id=? AND paid=0 ORDER BY period LIMIT 1",
+        (row["id"],),
     ).fetchone()
-    due_date = parse(bill["due_date"]) if bill and bill["due_date"] else next_due
+    if unpaid:
+        period = unpaid["period"]
+        due_date = (
+            parse(unpaid["due_date"]) if unpaid["due_date"]
+            else next_monthly(row["repay_day"], parse(f"{period}-01"))
+        )
+        bill = unpaid
+    else:
+        next_due = next_monthly(row["repay_day"], base)
+        period = next_due.isoformat()[:7]                   # 该还款日所属账单期 YYYY-MM
+        bill = conn.execute(
+            "SELECT * FROM bills WHERE card_id=? AND period=?", (row["id"], period)
+        ).fetchone()
+        due_date = parse(bill["due_date"]) if bill and bill["due_date"] else next_due
     days = (due_date - base).days
     card["next_due"] = due_date.isoformat()
     card["next_due_days"] = days
@@ -54,7 +67,7 @@ def card_state(conn: sqlite3.Connection, row: sqlite3.Row, base: datetime.date |
     fee = conn.execute("SELECT * FROM fees WHERE card_id=?", (row["id"],)).fetchone()
     fee_state = None
     if fee and (fee["amount"] > 0 or fee["target_count"] > 0) and fee["next_date"]:
-        nd = parse(roll_next(fee["next_date"], "yearly"))    # 年费日按年滚动（写库动作由保存接口负责）
+        nd = parse(fee["next_date"])     # 不滚动：年费日过了保持负数（同款教训），bump 达标或改期后自然消失
         fee_days = (nd - base).days
         need = fee["target_count"] - fee["done_count"]
         fee_state = {
@@ -109,9 +122,12 @@ def snapshot(conn: sqlite3.Connection) -> dict:
             has_unpaid = True
             if c["bill_amount"] is not None:
                 total_due += c["bill_amount"]
-        label = f"{c['name']} · {c['next_due'][5:]} 到期"
         if c["bill_paid"]:
             label = f"{c['name']} · 本期已还"
+        elif c["next_due_days"] < 0:
+            label = f"{c['name']} · 已逾期 {-c['next_due_days']} 天"
+        else:
+            label = f"{c['name']} · {c['next_due'][5:]} 到期"
         cand = (c["next_due_days"], label, c["id"])
         if not c["bill_paid"] and (nearest is None or cand[0] < nearest[0]):
             nearest = cand
