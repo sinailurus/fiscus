@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from . import auth, mailer, reminders
 from .db import MEDIA_DIR, db, get_setting, init_db, set_setting
 
-APP_VERSION = "1.2.1-beta.2"
+APP_VERSION = "1.2.1-beta.3"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 
 CARD_IMAGE_RE = re.compile(r"^card_\d+\.(png|jpg|webp)$")
@@ -155,6 +155,7 @@ def _settings_payload(conn) -> dict:
         "login_bg_mask": int(get_setting(conn, "login_bg_mask", "45") or 45),
         "login_icon": get_setting(conn, "login_icon", ""),
         "urgent_days": int(get_setting(conn, "notify_urgent_days", "3") or 3),
+        "show_todo_badge": get_setting(conn, "show_todo_badge", "1") == "1",
         "notify_enabled": get_setting(conn, "notify_enabled", "0") == "1",
         "notify_emails": get_setting(conn, "notify_emails", ""),
         "bank_names": get_setting(conn, "bank_names", ""),
@@ -205,6 +206,8 @@ def put_settings(request: Request, body: dict):
             if body["skin"] not in ALLOWED_SKINS:
                 raise HTTPException(status_code=400, detail="非法的界面风格")
             set_setting(conn, "skin", body["skin"])
+        if "show_todo_badge" in body:
+            set_setting(conn, "show_todo_badge", "1" if body["show_todo_badge"] else "0")
         if "login_title" in body:
             v = str(body["login_title"] or "").strip()
             if len(v) > 24:

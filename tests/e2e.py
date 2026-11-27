@@ -241,6 +241,32 @@ with sync_playwright() as p:
     view_saved = pg.evaluate("localStorage.getItem('fiscus-todo-view')")
     check("月历视图记忆落盘", view_saved == "datebar", view_saved)
 
+    # 待办角标开关（1.2.1：设置即改即存，关闭后底栏红色数字气泡隐藏）
+    ov_b = pg.evaluate("fetch('/api/overview').then(r => r.json())")
+    has_pending = ov_b["cards"] and (
+        any(not c["bill_paid"] and c["next_due_days"] <= 7 for c in ov_b["cards"])
+        or any(c.get("fee", {}) and c["fee"].get("alert") for c in ov_b["cards"]))
+    badge_visible_before = pg.locator("#todo-badge").is_visible()
+    pg.locator('.tab-item[data-tab="settings"]').click()
+    pg.wait_for_timeout(700)
+    if not pg.locator("#set-todo-badge").is_checked():
+        pg.click("#set-todo-badge")
+        pg.wait_for_timeout(700)
+    check("角标开关默认可开", pg.locator("#todo-badge").is_visible()
+          or not has_pending, f"pending={has_pending}")
+    if has_pending:
+        check("有临期项时角标可见", badge_visible_before or pg.locator("#todo-badge").is_visible())
+    pg.click("#set-todo-badge")
+    pg.wait_for_timeout(700)
+    check("关闭后角标隐藏", not pg.locator("#todo-badge").is_visible())
+    persisted = pg.evaluate("fetch('/api/settings').then(r => r.json())")
+    check("角标开关已持久化", persisted["show_todo_badge"] is False, str(persisted["show_todo_badge"]))
+    pg.click("#set-todo-badge")
+    pg.wait_for_timeout(700)
+    check("重开后角标恢复", pg.locator("#todo-badge").is_visible() or not has_pending)
+    pg.locator('.tab-item[data-tab="cards"]').click()
+    pg.wait_for_timeout(400)
+
     # 逾期账单打卡后倒计时恢复滚动（逾期义务确认了才走）
     ov2 = pg.evaluate("fetch('/api/overview').then(r => r.json())")
     ccb2 = next((c for c in ov2["cards"] if c["name"] == "建行卡"), None)

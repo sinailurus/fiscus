@@ -609,7 +609,8 @@ function renderTodo() {
   const benPending = o.cards.reduce((a, c) => a + c.benefits.filter((b) => b.alert).length, 0);
   const total = repayPending + feePending + benPending;
   const badge = $("#todo-badge");
-  badge.classList.toggle("hidden", !total);
+  const showBadge = state.settings?.show_todo_badge !== false;
+  badge.classList.toggle("hidden", !total || !showBadge);
   badge.textContent = total;
 
   /* 横向日期条：未来 14 天 */
@@ -1334,6 +1335,7 @@ function fillSettings() {
   document.querySelectorAll('input[name="set-skin"]').forEach((r) => r.checked = r.value === (s.skin || "glass"));
   if (state.me?.logged_in) updateBackupRollback();
   renderBankNameRows(bankNameMap());
+  $("#set-todo-badge").checked = s.show_todo_badge !== false;
   $("#set-notify-on").checked = !!s.notify_enabled;
   $("#set-notify-emails").value = s.notify_emails || "";
   $("#set-lead").value = s.notify_lead_days ?? 3;
@@ -1357,6 +1359,11 @@ $("#set-bg-mask")?.addEventListener("input", () => {
   const v = +$("#set-bg-mask").value;
   $("#set-bg-mask-value").textContent = `${v}%`;
   $("#app-bg")?.style.setProperty("--app-mask", `${v / 100}`);
+});
+$("#set-todo-badge")?.addEventListener("change", async () => {
+  await saveAppearance({ show_todo_badge: $("#set-todo-badge").checked },
+    $("#set-todo-badge").checked ? "待办角标已开启" : "待办角标已关闭");
+  renderTodo();
 });
 $("#set-bg-mask")?.addEventListener("change", () => saveAppearance({ bg_mask: +$("#set-bg-mask").value }, "遮罩浓度已保存"));
 $("#set-bg-file")?.addEventListener("change", async () => {
