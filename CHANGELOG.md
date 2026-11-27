@@ -2,6 +2,12 @@
 
 All notable changes to Fiscus are documented in this file.
 
+## [1.2.2.1] - 2026-11-27
+
+### Fixed
+
+- 修复借记卡徽章在卡包 / 详情卡面上未跟随卡面亮度适配体系的问题：深色卡面上现与还款徽章同款深底白字，浅色卡面自动切换深字浅底
+
 ## [1.2.2] - 2026-11-27
 
 ### Added

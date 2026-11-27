@@ -511,7 +511,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 :is(.wallet-card, .wallet-open, .detail-face) .badge-ok {
   background: rgba(97, 171, 131, .8); color: #fff;
 }
-:is(.wallet-card, .wallet-open, .detail-face) :is(.badge-blue, .badge-deep) {
+:is(.wallet-card, .wallet-open, .detail-face) :is(.badge-blue, .badge-deep, .badge-mute) {
   background: rgba(36, 54, 96, .82); color: #fff; border-color: transparent;
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
 }
