@@ -417,6 +417,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   .wallet-open, .wallet-open.closing, .wallet-info-panel { animation: none; }
 }
 .wallet-face {
+  color: #fff;                  /* 卡面文字默认白字（暗底兜底）：此前缺失导致展开面板文字继承主题深色（v1.0 宿疾） */
   aspect-ratio: 85.6 / 54;      /* ISO ID-1 实体银行卡比例，卡面图完整显示 */
   background-size: cover; background-position: center;
   background-origin: border-box; background-clip: border-box;  /* 图铺满到边缘，杜绝底色外露 */

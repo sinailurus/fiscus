@@ -231,7 +231,7 @@ function renderCardWallet(cards, urgent) {
   if (openCard) {
     const rest = cards.filter((c) => c.id !== openCard.id);
     box.innerHTML = `
-      <div class="wallet-open">
+      <div class="wallet-open" data-id="${openCard.id}">
         ${walletFaceHTML(openCard, urgent, true)}
         <div class="wallet-info-panel">
           <div class="wip-bill" style="--bill-c:${esc(openCard.color)}">
