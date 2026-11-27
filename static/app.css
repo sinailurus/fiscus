@@ -655,7 +655,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .bill-month-nav #bill-month-label { min-width: 86px; text-align: center; }
 .bill-sum {
   display: flex; border-radius: 14px; overflow: hidden;
-  border: 1px solid var(--line); background: var(--card); margin-bottom: 12px;
+  border: 1px solid var(--line); background: var(--panel); margin-bottom: 12px;
 }
 .bill-sum .cell { flex: 1; padding: 12px 8px; text-align: center; }
 .bill-sum .cell + .cell { border-left: 1px solid var(--line); }
@@ -665,7 +665,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .bill-sum .v.bad { color: var(--danger); }
 .bill-row {
   display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-  border-radius: 12px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; background: var(--panel); border: 1px solid var(--line);
   margin-bottom: 8px; cursor: pointer; transition: border-color .12s;
 }
 .bill-row:hover { border-color: var(--accent); }
@@ -744,7 +744,7 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .mday-title { font-size: 13px; font-weight: 600; margin: 14px 2px 8px; }
 .day-item {
   display: flex; align-items: center; gap: 10px; padding: 9px 10px;
-  border-radius: 12px; background: var(--card); border: 1px solid var(--line); margin-bottom: 7px;
+  border-radius: 12px; background: var(--panel); border: 1px solid var(--line); margin-bottom: 7px;
 }
 .day-item .face { width: 36px; height: 23px; border-radius: 5px; flex: none; }
 .day-item .face.ghost { background: var(--panel-2, var(--line)); }

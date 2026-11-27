@@ -493,11 +493,13 @@ function bindDetail(c) {
                 cycle: b.cycle, next_reset: b.expire_date } });
       await reload();
     });
-    $(".b-del", el)?.addEventListener("click", async () => {
-      if (!confirm(`删除权益「${b.name}」？`)) return;
-      await api(`/api/benefits/${bid}`, { method: "DELETE" });
-      await reload();
-    });
+    $(".b-del", el)?.addEventListener("click", () =>
+      askConfirm("删除权益", `将删除权益「${b.name}」，操作不可恢复。`, async () => {
+        try {
+          await api(`/api/benefits/${bid}`, { method: "DELETE" });
+          await reload();
+        } catch (ex) { toast("删除失败：" + ex.message); }
+      }));
   });
   $$(".other-card").forEach((el) =>
     el.addEventListener("click", () => openDetail(+el.dataset.id)));
