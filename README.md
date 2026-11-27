@@ -25,6 +25,32 @@ docker compose up -d
 
 默认端口 8310，数据目录 `./data`。
 
+### Ubuntu 快速部署（一条龙，复制粘贴即可）
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh          # 已装过 Docker 可跳过
+mkdir -p ~/fiscus/data && cd ~/fiscus
+cat > docker-compose.yml << 'YML'
+services:
+  fiscus:
+    image: ghcr.nju.edu.cn/sinailurus/fiscus:latest   # 国内加速；可直连时换 ghcr.io
+    user: "0:0"                                        # 修权限必需，勿删
+    container_name: fiscus
+    restart: unless-stopped
+    ports:
+      - "8310:8000"
+    environment:
+      - TZ=Asia/Shanghai
+      - AUTH_PASSWORD=改成你的访问密码
+      - DATA_DIR=/data
+    volumes:
+      - ./data:/data
+YML
+sudo docker compose up -d
+```
+
+浏览器访问 `http://机器IP:8310`。日常更新：`sudo docker compose pull && sudo docker compose up -d`；备份拷走 `~/fiscus/data` 目录即可（全部卡片、账单与设置都在里面）。
+
 ## 环境变量
 
 | 变量 | 说明 |
