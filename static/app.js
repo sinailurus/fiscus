@@ -268,8 +268,8 @@ function renderCardWallet(cards, urgent) {
               : `¥${fmtMoney(openCard.bill_amount)}`
             }</span>
           </div>`}
+          <div class="wip-title">${esc(openCard.name)}</div>
           <div class="wip-grid">
-            <div class="wip-item"><span class="wip-k">卡名</span><span class="wip-v">${esc(openCard.name)}</span></div>
             <div class="wip-item"><span class="wip-k">银行</span><span class="wip-v">${esc(bankDisplay(openCard.bank) || "—")}</span></div>
             <div class="wip-item"><span class="wip-k">类型</span><span class="wip-v">${debit ? '<span class="wip-tag">借记卡 · 无账单</span>' : '<span class="wip-tag">信用卡</span>'}</span></div>
             ${debit ? "" : `<div class="wip-item"><span class="wip-k">还款日</span><span class="wip-v">每月 ${openCard.repay_day} 号 · ${openCard.bill_paid ? "已还" : `${openCard.next_due_days} 天后`}</span></div>

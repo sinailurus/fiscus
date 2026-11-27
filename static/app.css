@@ -446,6 +446,11 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .wip-bill-amount.empty { color: var(--text-3, #98a2b3); font-weight: 500; }
 .wip-bill-amount.paid { color: var(--ok, #2e9e6b); }
 .wip-item { min-width: 0; }
+/* 卡名标题行：独占一行，比普通信息值大一丢丢的强调字体 */
+.wip-title {
+  font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: .2px;
+  margin: 2px 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 /* 卡组织/等级胶囊（SubDeck paused-tag 设计语言） */
 .wip-tag {
   display: inline-block; font-size: 12px; font-weight: 500;

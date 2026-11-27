@@ -417,7 +417,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(300)
     # 展开面板删除卡片（1.2.1：删除按钮 + 二次确认）
     rows_before = pg.evaluate("fetch('/api/overview').then(r => r.json()).then(j => j.cards.length)")
-    wip_name = pg.locator(".wallet-open .wip-grid .wip-v").first.inner_text()
+    wip_name = pg.locator(".wallet-open .wip-title").inner_text()
     pg.click("#btn-wallet-del")
     pg.wait_for_timeout(400)
     check("删除弹二次确认窗", pg.is_visible("#confirm-mask")
