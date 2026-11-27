@@ -2,7 +2,7 @@
 
 All notable changes to Fiscus are documented in this file.
 
-## [1.2.2.1] - 2026-11-27
+## [1.2.3-beta.1] - 2026-11-27
 
 ### Fixed
 
