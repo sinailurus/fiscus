@@ -42,7 +42,7 @@ input, select { font: inherit; }
 a { color: var(--accent); text-decoration: none; }
 .hidden { display: none !important; }
 
-/* ============ 通用控件（实心按钮体系，参照 TA 截图 P1/P2：主=accent 实心白字，
+/* ============ 通用控件（实心按钮体系，参照设计稿 P1/P2：主=accent 实心白字，
              次=实心亮面深字；深色模式次钮表面须比背景亮一档，不与背景糊成一片） ============ */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
