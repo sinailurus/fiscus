@@ -951,8 +951,8 @@ function applyTodoView() {
   const mcal = state.todoView === "mcal";
   $("#todo-datebar-wrap")?.classList.toggle("hidden", mcal);
   $("#todo-mcal-wrap")?.classList.toggle("hidden", !mcal);
-  $$("#todo-seg button").forEach((b) =>
-    b.classList.toggle("on", b.dataset.tview === state.todoView));
+  $$("#todo-seg .seg-btn").forEach((b) =>
+    b.classList.toggle("active", b.dataset.tview === state.todoView));
   if (mcal) renderMcal();
 }
 $$("#todo-seg button").forEach((b) =>

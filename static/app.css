@@ -234,7 +234,8 @@ body[data-skin="glassplus"] {
   --panel-2: color-mix(in srgb, var(--card) 62%, transparent);
 }
 body[data-skin="glassplus"] :is(.modal, .card-detail, .login-card, .info-card,
-.quick-actions, .todo-item, .wallet-info-panel, .topbar) {
+.quick-actions, .todo-item, .wallet-info-panel, .topbar,
+.mcal, .bill-sum, .bill-row, .bill-hist, .day-item, .h-toggle) {
   backdrop-filter: blur(16px) saturate(1.25);
   -webkit-backdrop-filter: blur(16px) saturate(1.25);
   border-color: color-mix(in srgb, var(--line) 55%, transparent);
@@ -701,16 +702,10 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .h-close:hover { color: var(--danger); }
 
 /* ============ 待办页：日期条 ↔ 月历 双视图（1.2.0） ============ */
-.todo-seg {
-  display: inline-flex; border: 1px solid var(--line); border-radius: 999px;
-  overflow: hidden; margin-bottom: 12px; background: var(--card);
-}
-.todo-seg button {
-  border: none; background: none; padding: 5px 16px; font-size: 12.5px;
-  color: var(--text-2); cursor: pointer; font-family: inherit; transition: background .12s;
-}
-.todo-seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
-.mcal { border: 1px solid var(--line); border-radius: 14px; background: var(--card); padding: 10px; }
+/* 切换胶囊复用全局 .seg / .seg-btn 体系（与卡包页「列表|卡包」同款） */
+/* 月历容器与格子透明度照抄 SubDeck 日历：容器 var(--panel)（玻璃皮肤下半透明），
+   格子 background:none 透底，hover 才上弱色，today 描边高亮非实心 */
+.mcal { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 10px; }
 .mcal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .mcal-month { font-size: 14px; font-weight: 700; }
 .mcal-nav { display: flex; align-items: center; gap: 6px; }
@@ -724,6 +719,8 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   cursor: pointer; border: none; background: none; font-family: inherit; position: relative;
 }
 .mcal-grid .cell.blank { cursor: default; }
+.mcal-grid .cell:hover { background: var(--accent-weak); }
+.mcal-grid .cell.blank:hover { background: none; }
 .mcal-grid .cell .d { font-size: 12.5px; font-weight: 600; line-height: 1.2; color: var(--text); }
 .mcal-grid .cell .marks { display: flex; gap: 3px; align-items: center; height: 12px; }
 .mk { width: 9px; height: 9px; border-radius: 3px; }
