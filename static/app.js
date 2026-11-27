@@ -254,7 +254,8 @@ function renderCardWallet(cards, urgent) {
           </div>
           <div class="wip-actions">
             <button class="btn btn-primary btn-sm" id="btn-wallet-edit">编辑</button>
-            <button class="btn btn-ghost btn-sm" id="btn-wallet-collapse">收起</button>
+            <button class="btn btn-sm" id="btn-wallet-collapse">收起</button>
+            <button class="btn btn-danger btn-sm" id="btn-wallet-del">删除</button>
           </div>
         </div>
       </div>
@@ -280,6 +281,10 @@ function renderCardWallet(cards, urgent) {
       }
     };
     $("#btn-wallet-collapse", box)?.addEventListener("click", collapse);
+    $("#btn-wallet-del", box)?.addEventListener("click", () =>
+      deleteCardFlow(openCard.id, openCard.name, () => {
+        state.walletOpenId = null;   /* renderCards 稍后接管重渲染 */
+      }));
     /* 点本卡卡面同样收起 */
     $(".wallet-open .wallet-face", box)?.addEventListener("click", collapse);
     /* 点底部折叠卡面或空白处 → 恢复完整层叠视图 */
@@ -372,6 +377,7 @@ function detailHtml(c, urgent) {
   <div class="quick-actions">
     <button class="quick-btn ${c.bill_paid ? "undone" : ""}" id="q-toggle-paid">${c.bill_paid ? "撤销已还" : "标记已还"}</button>
     <button class="quick-btn" id="q-amount">记金额</button>
+    <button class="quick-btn quick-danger" id="q-detail-del" title="删除卡片">删除</button>
   </div>
 
   <div class="section-label">账单与还款</div>
@@ -450,6 +456,8 @@ function bindDetail(c) {
     await reload();
   });
   $("#q-amount").addEventListener("click", () => $("#bill-input").focus());
+  $("#q-detail-del")?.addEventListener("click", () =>
+    deleteCardFlow(c.id, c.name, closeDetail));
   $("#bill-save").addEventListener("click", async () => {
     const v = $("#bill-input").value;
     if (v === "") { toast("请输入金额"); return; }
@@ -783,6 +791,40 @@ function initTodoSwipe() {
   }, true);
 }
 
+/* ---------------------------------------------------------------- 通用二次确认（危险操作复用） */
+let confirmCb = null;
+function askConfirm(title, text, onOk) {
+  $("#confirm-title").textContent = title;
+  $("#confirm-text").textContent = text;
+  confirmCb = onOk;
+  $("#confirm-mask").classList.remove("hidden");
+}
+$("#btn-confirm-cancel")?.addEventListener("click", () => {
+  confirmCb = null;
+  $("#confirm-mask").classList.add("hidden");
+});
+$("#btn-confirm-go")?.addEventListener("click", async () => {
+  const cb = confirmCb;
+  confirmCb = null;
+  $("#confirm-mask").classList.add("hidden");
+  cb && await cb();
+});
+
+/* 删除卡片（详情页 / 卡包展开面板共用）：二次确认 → 删除 → 关闭视图刷新列表 */
+async function deleteCardFlow(id, name, afterClose) {
+  askConfirm("删除卡片",
+    `将删除「${name}」及其全部账单、年费、权益记录，操作不可恢复。`,
+    async () => {
+      try {
+        await api(`/api/cards/${id}`, { method: "DELETE" });
+        toast("卡片已删除");
+        afterClose();
+        await refreshOverview();
+        renderCards(); renderTodo();
+      } catch (ex) { toast("删除失败：" + ex.message); }
+    });
+}
+
 /* ---------------------------------------------------------------- 账单页（1.2.0：跨卡月度总账 + 单卡历史 + 补录） */
 const nowYM = () => {
   const d = new Date();
@@ -1089,12 +1131,21 @@ $("#btn-detail-edit")?.addEventListener("click", () => {
   closeDetail();
   openCardModal(id);
 });
-$("#btn-card-delete")?.addEventListener("click", async () => {
-  if (!state.editId || !confirm("删除后该卡的账单、年费、权益记录全部清除，确定？")) return;
-  await api(`/api/cards/${state.editId}`, { method: "DELETE" });
-  toast("卡片已删除");
-  closeCardModal();
-  await refreshOverview();
+$("#btn-card-delete")?.addEventListener("click", () => {
+  if (!state.editId) return;
+  const id = state.editId;
+  const name = $("#f-name").value || "该卡";
+  askConfirm("删除卡片",
+    `将删除「${name}」及其全部账单、年费、权益记录，操作不可恢复。`,
+    async () => {
+      try {
+        await api(`/api/cards/${id}`, { method: "DELETE" });
+        toast("卡片已删除");
+        closeCardModal();
+        await refreshOverview();
+        renderCards(); renderTodo();
+      } catch (ex) { toast("删除失败：" + ex.message); }
+    });
 });
 $("#f-image")?.addEventListener("change", () => {
   const file = $("#f-image").files[0];

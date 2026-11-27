@@ -85,6 +85,7 @@ with sync_playwright() as p:
     pg.click("#q-toggle-paid")
     pg.wait_for_timeout(600)
     check("标记已还按钮翻转", "撤销已还" in pg.inner_text("#detail-body"))
+    check("详情页快捷区含删除", pg.locator("#q-detail-del").count() == 1)
     pg.click("#btn-detail-close")
 
     # 详情 → 编辑回填（回归：closeDetail 清空 detailId 曾导致编辑变空白新增）
@@ -96,6 +97,18 @@ with sync_playwright() as p:
           f"got={pg.input_value('#f-name')!r}")
     check("编辑弹窗标题正确", "编辑" in pg.inner_text("#card-modal-title"))
     check("编辑表单含银行 Logo 上传", pg.is_visible("#card-modal .file-btn") and pg.locator("#f-bank-logo").count() == 1)
+    # 编辑弹窗删除按钮 → 应用内二次确认（1.2.1：原浏览器原生 confirm 已替换）
+    n_before = pg.evaluate("fetch('/api/overview').then(r => r.json()).then(j => j.cards.length)")
+    pg.click("#btn-card-delete")
+    pg.wait_for_timeout(400)
+    check("编辑弹窗删除弹确认", pg.is_visible("#confirm-mask")
+          and pg.input_value("#f-name") in pg.inner_text("#confirm-text"),
+          pg.inner_text("#confirm-text")[:36])
+    pg.click("#btn-confirm-cancel")
+    pg.wait_for_timeout(400)
+    check("编辑弹窗删除可取消", not pg.is_visible("#confirm-mask")
+          and pg.is_visible("#card-modal")
+          and pg.evaluate("fetch('/api/overview').then(r => r.json()).then(j => j.cards.length)") == n_before)
     pg.click("#btn-card-modal-close")
     pg.wait_for_timeout(300)
     pg.locator(".card-row").first.click()
@@ -297,6 +310,28 @@ with sync_playwright() as p:
     check("展开态编辑按钮进编辑弹窗", pg.input_value("#f-name") != "")
     pg.click("#btn-card-modal-close")
     pg.wait_for_timeout(300)
+    # 展开面板删除卡片（1.2.1：删除按钮 + 二次确认）
+    rows_before = pg.evaluate("fetch('/api/overview').then(r => r.json()).then(j => j.cards.length)")
+    wip_name = pg.locator(".wallet-open .wip-grid .wip-v").first.inner_text()
+    pg.click("#btn-wallet-del")
+    pg.wait_for_timeout(400)
+    check("删除弹二次确认窗", pg.is_visible("#confirm-mask")
+          and wip_name in pg.inner_text("#confirm-text"),
+          pg.inner_text("#confirm-text")[:36])
+    pg.click("#btn-confirm-cancel")
+    pg.wait_for_timeout(500)
+    check("取消后卡片仍在", pg.evaluate(
+        "fetch('/api/overview').then(r => r.json()).then(j => j.cards.length)") == rows_before)
+    pg.click("#btn-wallet-del")
+    pg.wait_for_timeout(400)
+    pg.click("#btn-confirm-go")
+    pg.wait_for_timeout(1000)
+    rows_after = pg.evaluate("fetch('/api/overview').then(r => r.json()).then(j => j.cards.length)")
+    check("确认后卡片已删除", rows_after == rows_before - 1, f"{rows_before} -> {rows_after}")
+    check("删除后回到层叠视图", pg.locator(".wallet-info-panel").count() == 0
+          and pg.locator(".wallet-card").count() >= 1)
+    pg.locator(".wallet-card").first.click(position={"x": 100, "y": 20})
+    pg.wait_for_selector(".wallet-info-panel", timeout=5000)
     pg.click("#btn-wallet-collapse")
     pg.wait_for_timeout(300)
     check("收起返回层叠", pg.locator(".wallet-info-panel").count() == 0)
@@ -308,7 +343,7 @@ with sync_playwright() as p:
     pg.locator(".wallet-card-mini").last.click(position={"x": 100, "y": 10})
     pg.wait_for_timeout(500)
     check("点折叠卡恢复完整视图", pg.locator(".wallet-info-panel").count() == 0
-          and pg.locator(".wallet-card").count() >= 3)
+          and pg.locator(".wallet-card").count() >= 2)
 
     # 设置页
     pg.locator('.tab-item[data-tab="settings"]').click()

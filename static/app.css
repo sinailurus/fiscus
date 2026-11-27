@@ -606,6 +606,8 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .quick-btn + .quick-btn { border-left: 1px solid var(--line); }
 .quick-btn:active { background: var(--accent-weak); }
 .quick-btn.undone { color: var(--text-2); }
+.quick-btn.quick-danger { color: var(--danger); }
+.quick-btn.quick-danger:active { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .info-card { background: var(--panel); border-radius: var(--radius); padding: 14px 16px; margin-top: 12px; box-shadow: var(--shadow); }
 .info-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 13px; }
 .info-row + .info-row { border-top: 1px solid var(--line); }
