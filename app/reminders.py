@@ -17,7 +17,7 @@ BENEFIT_LEAD_DEFAULT = 14    # 权益清零提前提醒（天）
 CARD_FIELDS = (
     "id", "name", "bank", "color", "card_image", "bill_day",
     "repay_day", "lead_days", "limit_amount", "notes", "sort_order",
-    "bank_logo", "report_combined", "network", "level",
+    "bank_logo", "report_combined", "network", "level", "card_type",
 )
 
 
@@ -32,6 +32,16 @@ def card_state(conn: sqlite3.Connection, row: sqlite3.Row, base: datetime.date |
     """单张卡的展示状态（下次还款、金额、年费、权益）。"""
     base = base or today()
     card = {k: row[k] for k in CARD_FIELDS}
+    card["image_url"] = f"/api/cards/image/{row['card_image']}" if row["card_image"] else ""
+    card["bank_logo_url"] = f"/api/cards/bank-logo/{row['bank_logo']}" if row["bank_logo"] else ""
+
+    # ---- 借记卡：无账单无还款，跳过还款倒计时（中性值：不欠款、不进提醒与汇总） ----
+    if row["card_type"] == "debit":
+        card.update({
+            "next_due": "", "next_due_days": None, "next_period": "",
+            "bill_amount": None, "bill_paid": True, "bill_id": None,
+        })
+        return _fee_benefit_state(conn, row, card, base)
 
     # ---- 还款：有未还账单 → 最早一期未还账单锚定倒计时（SubDeck 前期同款教训：
     #      不许惰性滚动吞掉逾期义务，过期=负数天，还清才看下个周期）----
@@ -60,9 +70,11 @@ def card_state(conn: sqlite3.Connection, row: sqlite3.Row, base: datetime.date |
     card["bill_amount"] = bill["amount"] if bill else None   # None=未录入金额
     card["bill_paid"] = bool(bill["paid"]) if bill else False
     card["bill_id"] = bill["id"] if bill else None
-    card["image_url"] = f"/api/cards/image/{row['card_image']}" if row["card_image"] else ""
-    card["bank_logo_url"] = f"/api/cards/bank-logo/{row['bank_logo']}" if row["bank_logo"] else ""
+    return _fee_benefit_state(conn, row, card, base)
 
+
+def _fee_benefit_state(conn: sqlite3.Connection, row: sqlite3.Row, card: dict, base: datetime.date) -> dict:
+    """年费 + 权益状态（信用卡与借记卡共用）。"""
     # ---- 年费 ----
     fee = conn.execute("SELECT * FROM fees WHERE card_id=?", (row["id"],)).fetchone()
     fee_state = None
@@ -118,6 +130,8 @@ def snapshot(conn: sqlite3.Connection) -> dict:
     nearest = None                      # (days, 文案, card_id)
     events = []                         # 未来 60 天事件流（日历/时间线共用）
     for c in cards:
+        if c["card_type"] == "debit":
+            continue   # 借记卡：无账单无还款，不进汇总与事件流
         if not c["bill_paid"]:
             has_unpaid = True
             if c["bill_amount"] is not None:
@@ -176,6 +190,8 @@ def notify_entries(conn: sqlite3.Connection, lead_days: int) -> list[dict]:
     out = []
     snap = snapshot(conn)
     for c in snap["cards"]:
+        if c["card_type"] == "debit":
+            continue   # 借记卡：无账单无还款，不出账单日提醒与还款提醒
         # 节点一：账单日当天，出账提醒
         if c["bill_day"] and base.day == c["bill_day"]:
             out.append({

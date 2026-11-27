@@ -8,7 +8,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/icon-192.png" id="favicon">
   <link rel="apple-touch-icon" href="/assets/icons/icon-180.png">
-  <link rel="stylesheet" href="/assets/app.css?v=1.2.1">
+  <link rel="stylesheet" href="/assets/app.css?v=1.2.2-beta.1">
   <title>Fiscus</title>
 </head>
 <body>
@@ -366,8 +366,9 @@
     <div class="modal-body">
       <div class="form-row"><label>卡名</label><input class="input" id="f-name" maxlength="30" placeholder="如：招行白金卡"></div>
       <div class="form-row"><label>银行</label><input class="input" id="f-bank" maxlength="30" placeholder="如：招商银行"></div>
-      <div class="form-row"><label>还款日</label><input type="number" class="input sm" id="f-repay" min="1" max="31" value="5"><span class="unit">每月几号</span></div>
-      <div class="form-row"><label>账单日</label><input type="number" class="input sm" id="f-bill" min="0" max="31" value="0"><span class="unit">可不填</span></div>
+      <div class="form-row"><label class="check-row" style="margin:0;"><input type="checkbox" id="f-debit"><span>借记卡（无账单无还款，只进卡包）</span></label></div>
+      <div class="form-row" id="row-repay"><label>还款日</label><input type="number" class="input sm" id="f-repay" min="1" max="31" value="5"><span class="unit">每月几号</span></div>
+      <div class="form-row" id="row-bill"><label>账单日</label><input type="number" class="input sm" id="f-bill" min="0" max="31" value="0"><span class="unit">可不填</span></div>
       <div class="form-row"><label>卡组织</label><select class="input" id="f-network"><option value="">不设置</option><option value="银联">银联</option><option value="Visa">Visa</option><option value="Mastercard">Mastercard</option><option value="American Express">American Express</option><option value="Discover">Discover</option><option value="Diners Club">Diners Club</option><option value="JCB">JCB</option><option value="Mir">Mir（俄罗斯）</option></select></div>
       <div class="form-row"><label>等级</label><input class="input" id="f-level" maxlength="20" placeholder="选填，如 白金卡"></div>
       <div class="form-row"><label>额度</label><input type="number" class="input sm" id="f-limit" min="0" placeholder="选填"><span class="unit">元</span></div>
@@ -461,6 +462,6 @@
       </div>
     </div>
   </div>
-  <script src="/assets/app.js?v=1.2.1"></script>
+  <script src="/assets/app.js?v=1.2.2-beta.1"></script>
 </body>
 </html>

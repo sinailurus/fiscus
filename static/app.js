@@ -144,14 +144,21 @@ function dueBadge(days, paid, urgentDays) {
   return `<span class="badge badge-blue">${days} 天后</span>`;
 }
 function amountText(c) {
+  if (c.card_type === "debit") return "借记卡";
   return c.bill_amount === null ? "¥ --" : `¥${fmtMoney(c.bill_amount)}`;
+}
+/* 借记卡标签（灰，代替还款倒计时徽章） */
+function debitBadge() {
+  return `<span class="badge badge-mute">借记卡</span>`;
 }
 
 /* ---------------------------------------------------------------- 卡包页 */
 function renderCards() {
-  /* 临期优先：未还的按天数升序，已还的沉底（列表与卡包一致） */
+  /* 临期优先：未还的按天数升序，已还的沉底（列表与卡包一致）；借记卡无倒计时沉底 */
+  const days = (c) => c.card_type === "debit" ? Infinity : c.next_due_days;
   const cards = [...(state.overview?.cards || [])].sort((a, b) =>
-    (a.bill_paid - b.bill_paid) || (a.next_due_days - b.next_due_days));
+    ((a.card_type === "debit") - (b.card_type === "debit")) ||
+    (a.bill_paid - b.bill_paid) || (days(a) - days(b)));
   const urgent = state.settings?.urgent_days || 3;
   renderCardTable(cards, urgent);
   renderCardList(cards, urgent);
@@ -167,10 +174,10 @@ function renderCardTable(cards, urgent) {
         <span class="card-avatar" style="background:${esc(c.color)}">${c.image_url ? `<img src="${esc(c.image_url)}" alt="">` : esc(c.name.charAt(0))}</span>
         <span class="n">${esc(c.name)}${c.bank ? ` · ${esc(bankDisplay(c.bank))}` : ""}</span>
       </div></td>
-      <td class="ta-r">${c.bill_paid ? "已还清" : amountText(c)}</td>
-      <td>每月 ${c.repay_day} 号 · ${dueBadge(c.next_due_days, c.bill_paid, urgent)}</td>
+      <td class="ta-r">${c.card_type === "debit" ? "—" : (c.bill_paid ? "已还清" : amountText(c))}</td>
+      <td>${c.card_type === "debit" ? debitBadge() : `每月 ${c.repay_day} 号 · ${dueBadge(c.next_due_days, c.bill_paid, urgent)}`}</td>
       <td>${esc(bankDisplay(c.bank) || "—")}</td>
-      <td>${c.bill_paid ? `<span class="badge badge-ok">已还</span>` : `<span class="badge badge-blue">未还</span>`}</td>
+      <td>${c.card_type === "debit" ? debitBadge() : (c.bill_paid ? `<span class="badge badge-ok">已还</span>` : `<span class="badge badge-blue">未还</span>`)}</td>
       <td class="ta-r"><button class="icon-btn row-edit" data-id="${c.id}" title="编辑"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button></td>
     </tr>`).join("");
   $$("#cards-tbody tr").forEach((tr) => {
@@ -195,33 +202,43 @@ function renderCardList(cards, urgent) {
       </div>
       <div class="card-row-main">
         <div class="card-row-name">${esc(c.name)}${c.bank ? ` · ${esc(bankDisplay(c.bank))}` : ""}</div>
-        <div class="card-row-sub">每月 ${c.repay_day} 号 · ${amountText(c)}</div>
+        <div class="card-row-sub">${c.card_type === "debit" ? "借记卡 · 无账单" : `每月 ${c.repay_day} 号 · ${amountText(c)}`}</div>
       </div>
-      ${dueBadge(c.next_due_days, c.bill_paid, urgent)}
+      ${c.card_type === "debit" ? debitBadge() : dueBadge(c.next_due_days, c.bill_paid, urgent)}
     </div>`).join("");
   $$(".card-row", box).forEach((el) =>
     el.addEventListener("click", () => openDetail(+el.dataset.id)));
 }
 function walletFaceHTML(c, urgent, plain = false) {
+  const badge = c.card_type === "debit" ? debitBadge() : dueBadge(c.next_due_days, c.bill_paid, urgent);
   const head = plain
-    ? `<div class="wallet-top"><div></div><div class="wallet-badge-row">${dueBadge(c.next_due_days, c.bill_paid, urgent)}</div></div>`
+    ? `<div class="wallet-top"><div></div><div class="wallet-badge-row">${badge}</div></div>`
     : `<div class="wallet-top">
         <div>
           <div class="wallet-bank">${esc(bankDisplay(c.bank) || c.name)}</div>
           <div class="wallet-sub">${esc(c.name)}${c.notes ? ` · ${esc(c.notes)}` : ""}</div>
         </div>
-        <div class="wallet-badge-row">${dueBadge(c.next_due_days, c.bill_paid, urgent)}</div>
+        <div class="wallet-badge-row">${badge}</div>
       </div>`;
-  return `
-    <div class="wallet-face" style="background-color:${esc(c.color)};${c.image_url ? `background-image:url('${esc(c.image_url)}')` : ""}">
-      ${head}
-      <div class="wallet-top">
+  const foot = c.card_type === "debit"
+    ? `<div class="wallet-top">
+        <div>
+          <div class="wallet-due">借记卡</div>
+          <div class="wallet-sub">无账单无还款${c.limit_amount ? ` · 余额参考 ¥${fmtMoney(c.limit_amount)}` : ""}</div>
+        </div>
+        ${c.image_url ? "" : '<div class="wallet-chip"></div>'}
+      </div>`
+    : `<div class="wallet-top">
         <div>
           <div class="wallet-due">${c.bill_paid ? "已还清" : amountText(c)}</div>
           <div class="wallet-sub">每月 ${c.repay_day} 号还款${c.limit_amount ? ` · 额度 ¥${fmtMoney(c.limit_amount)}` : ""}</div>
         </div>
         ${c.image_url ? "" : '<div class="wallet-chip"></div>'}
-      </div>
+      </div>`;
+  return `
+    <div class="wallet-face" style="background-color:${esc(c.color)};${c.image_url ? `background-image:url('${esc(c.image_url)}')` : ""}">
+      ${head}
+      ${foot}
     </div>`;
 }
 
@@ -233,23 +250,25 @@ function renderCardWallet(cards, urgent) {
   /* 展开态：被点的卡置顶完整展示 + 基本信息块（含编辑入口），其余卡收到底部露边 */
   if (openCard) {
     const rest = cards.filter((c) => c.id !== openCard.id);
+    const debit = openCard.card_type === "debit";
     box.innerHTML = `
       <div class="wallet-open" data-id="${openCard.id}">
         ${walletFaceHTML(openCard, urgent, true)}
         <div class="wallet-info-panel">
-          <div class="wip-bill" style="--bill-c:${esc(openCard.color)}">
+          ${debit ? "" : `<div class="wip-bill" style="--bill-c:${esc(openCard.color)}">
             <span class="wip-bill-label">本期账单</span>
             <span class="wip-bill-amount ${openCard.bill_amount === null ? "empty" : openCard.bill_paid ? "paid" : ""}">${
               openCard.bill_paid ? "已还清"
               : openCard.bill_amount === null ? "--"
               : `¥${fmtMoney(openCard.bill_amount)}`
             }</span>
-          </div>
+          </div>`}
           <div class="wip-grid">
             <div class="wip-item"><span class="wip-k">卡名</span><span class="wip-v">${esc(openCard.name)}</span></div>
             <div class="wip-item"><span class="wip-k">银行</span><span class="wip-v">${esc(bankDisplay(openCard.bank) || "—")}</span></div>
-            <div class="wip-item"><span class="wip-k">还款日</span><span class="wip-v">每月 ${openCard.repay_day} 号 · ${openCard.bill_paid ? "已还" : `${openCard.next_due_days} 天后`}</span></div>
-            <div class="wip-item"><span class="wip-k">账单日</span><span class="wip-v">${openCard.bill_day ? `每月 ${openCard.bill_day} 号` : "未填"}</span></div>
+            <div class="wip-item"><span class="wip-k">类型</span><span class="wip-v">${debit ? '<span class="wip-tag">借记卡 · 无账单</span>' : '<span class="wip-tag">信用卡</span>'}</span></div>
+            ${debit ? "" : `<div class="wip-item"><span class="wip-k">还款日</span><span class="wip-v">每月 ${openCard.repay_day} 号 · ${openCard.bill_paid ? "已还" : `${openCard.next_due_days} 天后`}</span></div>
+            <div class="wip-item"><span class="wip-k">账单日</span><span class="wip-v">${openCard.bill_day ? `每月 ${openCard.bill_day} 号` : "未填"}</span></div>`}
             <div class="wip-item"><span class="wip-k">卡组织</span><span class="wip-v">${openCard.network ? `<span class="wip-tag">${esc(openCard.network)}</span>` : "—"}</span></div>
             <div class="wip-item"><span class="wip-k">等级</span><span class="wip-v">${openCard.level ? `<span class="wip-tag">${esc(openCard.level)}</span>` : "—"}</span></div>
             <div class="wip-item"><span class="wip-k">额度</span><span class="wip-v">${openCard.limit_amount ? `¥${fmtMoney(openCard.limit_amount)}` : "—"}</span></div>
@@ -422,8 +441,11 @@ function faceBlock(c) {
         ${c.image_url ? "" : '<div class="wallet-chip"></div>'}
       </div>
       <div class="wallet-top">
-        <div class="wallet-due">${c.bill_paid ? "已还清" : amountText(c)}</div>
-        <div class="wallet-badge-row">${dueBadge(c.next_due_days, c.bill_paid, state.settings?.urgent_days || 3)}</div>
+        <div>
+          <div class="wallet-due">${c.card_type === "debit" ? "借记卡" : (c.bill_paid ? "已还清" : amountText(c))}</div>
+          <div class="wallet-sub">${c.card_type === "debit" ? "无账单无还款" : `每月 ${c.repay_day} 号还款${c.limit_amount ? ` · 额度 ¥${fmtMoney(c.limit_amount)}` : ""}`}</div>
+        </div>
+        <div class="wallet-badge-row">${c.card_type === "debit" ? debitBadge() : dueBadge(c.next_due_days, c.bill_paid, state.settings?.urgent_days || 3)}</div>
       </div>
     </div>
   </div>`;
@@ -431,34 +453,36 @@ function faceBlock(c) {
 
 function detailHtml(c, urgent) {
   const f = c.fee;
+  const debit = c.card_type === "debit";
   return `
   ${faceBlock(c)}
 
   <div class="quick-actions">
-    <button class="quick-btn ${c.bill_paid ? "undone" : ""}" id="q-toggle-paid">${c.bill_paid ? "撤销已还" : "标记已还"}</button>
-    <button class="quick-btn" id="q-amount">记金额</button>
+    ${debit ? "" : `<button class="quick-btn ${c.bill_paid ? "undone" : ""}" id="q-toggle-paid">${c.bill_paid ? "撤销已还" : "标记已还"}</button>
+    <button class="quick-btn" id="q-amount">记金额</button>`}
     <button class="quick-btn quick-danger" id="q-detail-del" title="删除卡片">删除</button>
   </div>
 
-  <div class="section-label">账单与还款</div>
+  <div class="section-label">${debit ? "卡片信息" : "账单与还款"}</div>
   <div class="info-card">
-    <div class="info-row"><span class="info-label">本期账单（${esc(c.next_period)}）</span>
+    ${debit ? `<div class="info-row"><span class="info-label">卡类型</span>
+      <span class="info-value">借记卡 · 无账单无还款</span></div>` : `<div class="info-row"><span class="info-label">本期账单（${esc(c.next_period)}）</span>
       <span class="info-value big" id="bill-amount">${c.bill_amount === null ? "未录" : `¥${fmtMoney(c.bill_amount)}`}</span></div>
     <div class="info-row"><span class="info-label">还款日</span>
       <span class="info-value">${esc(c.next_due)} · ${c.next_due_days < 0 ? `已过期 ${-c.next_due_days} 天` : `${c.next_due_days} 天后`}</span></div>
     <div class="info-row"><span class="info-label">账单日</span>
-      <span class="info-value">${c.bill_day ? `每月 ${c.bill_day} 号` : "未设置"}</span></div>
+      <span class="info-value">${c.bill_day ? `每月 ${c.bill_day} 号` : "未设置"}</span></div>`}
     <div class="info-row"><span class="info-label">备注</span>
       <span class="info-value">${esc(c.notes || "--")}</span></div>
     ${(c.network || c.level) ? `<div class="info-row"><span class="info-label">卡片</span>
       <span class="info-value">${c.network ? `<span class="badge badge-blue tag">${esc(c.network)}</span>` : ""}${c.level ? ` <span class="badge badge-deep tag">${esc(c.level)}</span>` : ""}</span></div>` : ""}
-    <div class="mini-form" style="margin-top:8px">
+    ${debit ? "" : `<div class="mini-form" style="margin-top:8px">
       <input type="number" class="input" id="bill-input" min="0" step="0.01" placeholder="录入本期应还金额">
       <button class="btn btn-primary btn-sm" id="bill-save">保存金额</button>
     </div>
     ${c.bills.length ? `<div class="info-row" style="margin-top:8px"><span class="info-label">最近账单</span>
       <span class="info-value">${c.bills.slice(0, 4).map((b) =>
-        `${esc(b.period)} ${b.paid ? "已还" : "未还"}`).join(" · ")}</span></div>` : ""}
+        `${esc(b.period)} ${b.paid ? "已还" : "未还"}`).join(" · ")}</span></div>` : ""}`}
   </div>
 
   <div class="section-label">年费</div>
@@ -508,17 +532,17 @@ function bindDetail(c) {
   const urgent = state.settings?.urgent_days || 3;
   const reload = async () => { await refreshOverview(); await renderDetail(); };
 
-  $("#q-toggle-paid").addEventListener("click", async () => {
+  $("#q-toggle-paid")?.addEventListener("click", async () => {
     await api(`/api/cards/${c.id}/bill`, { method: "POST",
       body: { period: c.next_period, paid: !c.bill_paid, due_date: c.next_due,
               ...(c.bill_amount === null && !c.bill_paid ? {} : { amount: c.bill_amount ?? 0 }) } });
     toast(c.bill_paid ? "已撤销还款标记" : "已标记还清，本期停止提醒");
     await reload();
   });
-  $("#q-amount").addEventListener("click", () => $("#bill-input").focus());
+  $("#q-amount")?.addEventListener("click", () => $("#bill-input")?.focus());
   $("#q-detail-del")?.addEventListener("click", () =>
     deleteCardFlow(c.id, c.name, closeDetail));
-  $("#bill-save").addEventListener("click", async () => {
+  $("#bill-save")?.addEventListener("click", async () => {
     const v = $("#bill-input").value;
     if (v === "") { toast("请输入金额"); return; }
     await api(`/api/cards/${c.id}/bill`, { method: "POST",
@@ -1162,6 +1186,8 @@ function openCardModal(id = null) {
   $("#card-modal-title").textContent = id ? "编辑卡片" : "添加卡片";
   $("#f-name").value = c?.name || "";
   $("#f-bank").value = c?.bank || "";
+  $("#f-debit").checked = c?.card_type === "debit";
+  syncDebitRows();
   $("#f-repay").value = c?.repay_day || 5;
   $("#f-bill").value = c?.bill_day || 0;
   $("#f-limit").value = c?.limit_amount || "";
@@ -1183,6 +1209,13 @@ function openCardModal(id = null) {
 function closeCardModal() {
   $("#modal-mask").classList.add("hidden");
 }
+/* 借记卡勾选联动：隐藏还款日/账单日（借记卡无账单） */
+function syncDebitRows() {
+  const debit = $("#f-debit").checked;
+  $("#row-repay").classList.toggle("hidden", debit);
+  $("#row-bill").classList.toggle("hidden", debit);
+}
+$("#f-debit")?.addEventListener("change", syncDebitRows);
 $("#btn-card-modal-close")?.addEventListener("click", closeCardModal);
 $("#modal-mask")?.addEventListener("click", (e) => {
   if (e.target === e.currentTarget) closeCardModal();   /* 照 SubDeck：仅点遮罩空白处关闭 */
@@ -1252,6 +1285,7 @@ $("#btn-card-save")?.addEventListener("click", async () => {
   if (!name) { toast("请填写卡名"); return; }
   const body = {
     name, bank: $("#f-bank").value.trim(),
+    card_type: $("#f-debit").checked ? "debit" : "credit",
     repay_day: +($("#f-repay").value || 5), bill_day: +($("#f-bill").value || 0),
     limit: +($("#f-limit").value || 0), notes: $("#f-notes").value.trim(),
     network: $("#f-network").value.trim(), level: $("#f-level").value.trim(),

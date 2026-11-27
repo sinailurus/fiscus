@@ -42,6 +42,7 @@ def init_db() -> None:
                 sort_order   INTEGER NOT NULL DEFAULT 0,
                 bank_logo    TEXT NOT NULL DEFAULT '',
                 report_combined INTEGER NOT NULL DEFAULT 0,
+                card_type    TEXT NOT NULL DEFAULT 'credit',
                 created_at   TEXT NOT NULL,
                 updated_at   TEXT NOT NULL
             );
@@ -99,6 +100,8 @@ def init_db() -> None:
             conn.execute("ALTER TABLE cards ADD COLUMN network TEXT NOT NULL DEFAULT ''")
         if "level" not in cols:
             conn.execute("ALTER TABLE cards ADD COLUMN level TEXT NOT NULL DEFAULT ''")
+        if "card_type" not in cols:
+            conn.execute("ALTER TABLE cards ADD COLUMN card_type TEXT NOT NULL DEFAULT 'credit'")
 
 
 @contextmanager

@@ -320,6 +320,45 @@ with sync_playwright() as p:
           and pg.locator("#set-loginicon-file").count() == 1
           and pg.locator("#btn-loginicon-clear").count() == 1)
 
+    # 借记卡（1.2.2：勾选后只进卡包，不进账单/待办/月历/邮件提醒）
+    pg.click('.tab-item[data-tab="cards"]'); pg.wait_for_timeout(500)
+    pg.click("#btn-add-card"); pg.fill("#f-name", "测试借记卡"); pg.fill("#f-bank", "工商银行")
+    pg.check("#f-debit")
+    check("勾选借记卡隐藏还款日", pg.locator("#row-repay").is_hidden())
+    check("勾选借记卡隐藏账单日", pg.locator("#row-bill").is_hidden())
+    pg.click("#btn-card-save"); pg.wait_for_timeout(900)
+    ov = pg.evaluate("() => fetch('/api/overview').then(r => r.json())")
+    deb = next((c for c in ov["cards"] if c["name"] == "测试借记卡"), None)
+    check("借记卡已入卡包", deb is not None and deb["card_type"] == "debit")
+    check("借记卡不进概览汇总", all(e["card_name"] != "测试借记卡" for e in ov.get("events", [])))
+    # 卡包层叠显示借记卡（含灰徽章）
+    pg.click('.seg-btn[data-view="wallet"]'); pg.wait_for_timeout(700)
+    check("卡包层叠含借记卡", pg.locator(f'.wallet-card[data-id="{deb["id"]}"]').count() == 1)
+    check("借记卡灰徽章", pg.locator(f'.wallet-card[data-id="{deb["id"]}"] .badge-mute').count() == 1)
+    # 详情页：无还款信息
+    did = deb["id"]
+    pg.evaluate(f"() => openDetail({did})")
+    pg.wait_for_timeout(900)
+    check("借记卡详情无还款区", pg.locator("#q-toggle-paid").count() == 0
+          and pg.locator("#bill-save").count() == 0)
+    check("借记卡详情显示类型行", "借记卡" in pg.locator("#detail-body").inner_text())
+    pg.evaluate("() => closeDetail()"); pg.wait_for_timeout(400)
+    # 账单页不含借记卡
+    bills = pg.evaluate("""() => fetch('/api/bills?month=' + new Date().toISOString().slice(0, 7))
+        .then(r => r.json())""")
+    check("账单页不含借记卡", all(c["name"] != "测试借记卡" for c in bills["cards"]))
+    cal = pg.evaluate("""() => fetch('/api/bills/calendar?month=' + new Date().toISOString().slice(0, 7))
+        .then(r => r.json())""")
+    cal_names = [e["name"] for d in (cal.get("days") or {}).values() for e in d]
+    check("月历不含借记卡", "测试借记卡" not in cal_names)
+    # 编辑弹窗回显勾选
+    pg.click('.seg-btn[data-view="list"]'); pg.wait_for_timeout(400)
+    pg.evaluate(f"() => openCardModal({did})")
+    pg.wait_for_timeout(500)
+    check("编辑回显借记卡勾选", pg.locator("#f-debit").is_checked()
+          and pg.locator("#row-repay").is_hidden())
+    pg.click("#btn-card-modal-close"); pg.wait_for_timeout(300)
+
     # 卡面文字亮度自适应（1.2.1-beta.6：亮色卡深字/暗色卡白字）
     pg.evaluate("""async () => {
       await fetch('/api/cards', {method:'POST', headers:{'Content-Type':'application/json'},

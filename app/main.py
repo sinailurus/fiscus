@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from . import auth, mailer, reminders
 from .db import MEDIA_DIR, db, get_setting, init_db, set_setting
 
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2-beta.1"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
 
 CARD_IMAGE_RE = re.compile(r"^card_\d+\.(png|jpg|webp)$")
@@ -390,6 +390,11 @@ def _validate_card(body: dict, partial: bool = False) -> dict:
         out["level"] = str(body.get("level") or "")[:20]
     if "report_combined" in body or not partial:
         out["report_combined"] = 1 if body.get("report_combined") else 0
+    if "card_type" in body or not partial:
+        ct = str(body.get("card_type") or "credit")
+        if ct not in ("credit", "debit"):
+            raise HTTPException(status_code=400, detail="卡类型只能是 credit 或 debit")
+        out["card_type"] = ct
     return out
 
 
@@ -425,12 +430,12 @@ def create_card(request: Request, body: dict):
         max_sort = conn.execute("SELECT COALESCE(MAX(sort_order),0) m FROM cards").fetchone()["m"]
         cur = conn.execute(
             """INSERT INTO cards (name, bank, color, bill_day, repay_day, lead_days,
-               limit_amount, notes, sort_order, report_combined, network, level, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               limit_amount, notes, sort_order, report_combined, network, level, card_type, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (data["name"], data.get("bank", ""), data.get("color", ""), data.get("bill_day", 0),
              data["repay_day"], data.get("lead_days", 0), data.get("limit", 0),
              data.get("notes", ""), max_sort + 1, data.get("report_combined", 0),
-             data.get("network", ""), data.get("level", ""), now, now))
+             data.get("network", ""), data.get("level", ""), data.get("card_type", "credit"), now, now))
         return _card_payload(conn, cur.lastrowid)
 
 
@@ -706,6 +711,8 @@ def bills_month(request: Request, month: str = ""):
         total = paid_sum = unpaid_sum = 0.0
         paid_count = bill_count = 0
         for row in conn.execute("SELECT * FROM cards ORDER BY sort_order, id"):
+            if row["card_type"] == "debit":
+                continue   # 借记卡无账单，不出现在月度总账
             bill = conn.execute(
                 "SELECT amount, due_date, paid FROM bills WHERE card_id=? AND period=?",
                 (row["id"], month)).fetchone()
@@ -759,6 +766,8 @@ def bills_calendar(request: Request, month: str = ""):
         urgent = reminders._urgent_days(conn)
         days: dict = {}
         for row in conn.execute("SELECT * FROM cards ORDER BY sort_order, id"):
+            if row["card_type"] == "debit":
+                continue   # 借记卡无还款日/账单日事件，月历不标
             repay_day = int(row["repay_day"] or 0)
             bill_day = int(row["bill_day"] or 0)
             last = _month_days(year, mon)
