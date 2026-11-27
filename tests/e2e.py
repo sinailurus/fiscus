@@ -280,6 +280,47 @@ with sync_playwright() as p:
     pg.locator('.tab-item[data-tab="cards"]').click()
     pg.wait_for_timeout(400)
 
+    # SMTP 授权码教程帮助视图（1.2.1：照抄 SubDeck 站内视图，替换裸 HTML 新标签页）
+    pg.locator('.tab-item[data-tab="settings"]').click()
+    pg.wait_for_timeout(500)
+    pg.click("#link-smtp-guide")
+    pg.wait_for_timeout(800)
+    check("帮助视图打开", not pg.locator("#tab-smtp-help").is_hidden()
+          and "授权码" in pg.locator("#smtp-help-content").inner_text()[:200])
+    settings_on = pg.locator('.tab-item[data-tab="settings"].active').count() == 1
+    check("帮助页归属设置页高亮", settings_on)
+    check("教程排版有样式容器", pg.locator("#smtp-help-content.doc-content h2").count() >= 1)
+    pg.click("#btn-smtp-back")
+    pg.wait_for_timeout(500)
+    check("返回设置页", not pg.locator("#tab-settings").is_hidden()
+          and pg.locator("#tab-smtp-help").is_hidden())
+
+    # 卡面文字亮度自适应（1.2.1-beta.6：亮色卡深字/暗色卡白字）
+    pg.evaluate("""async () => {
+      await fetch('/api/cards', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({name: '亮色验证卡', color: '#FFD54F', repay_day: 15})});
+      await fetch('/api/cards', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({name: '暗色验证卡', color: '#1A237E', repay_day: 16})});
+    }""")
+    pg.reload(wait_until="networkidle"); pg.wait_for_timeout(1200)
+    id_map = pg.evaluate("""() => fetch('/api/overview').then(r => r.json())
+      .then(j => Object.fromEntries(j.cards.map(c => [c.name, c.id])))""")
+    light_ids = pg.evaluate("""() =>
+      [...document.querySelectorAll('.wallet-card.face-light')].map(e => +e.dataset.id)""")
+    check("亮色卡切深字", id_map.get("亮色验证卡") in light_ids,
+          f"light={light_ids} map={id_map}")
+    check("暗色卡保持白字", id_map.get("暗色验证卡") not in light_ids)
+    # 图例并入月历容器
+    pg.click('.tab-item[data-tab="todo"]'); pg.wait_for_timeout(600)
+    pg.click('#todo-seg button[data-tview="mcal"]'); pg.wait_for_timeout(800)
+    inside = pg.evaluate("() => !!document.querySelector('.mcal .mcal-legend')")
+    legend_color = pg.evaluate("""() => {
+      const i = document.querySelector('.mcal-legend i');
+      return getComputedStyle(i).color;
+    }""")
+    check("图例并入月历容器", inside and legend_color not in ("rgba(0, 0, 0, 0)", ""),
+        f"容器内={inside} 文字色={legend_color}")
+
     # 逾期账单打卡后倒计时恢复滚动（逾期义务确认了才走）
     ov2 = pg.evaluate("fetch('/api/overview').then(r => r.json())")
     ccb2 = next((c for c in ov2["cards"] if c["name"] == "建行卡"), None)

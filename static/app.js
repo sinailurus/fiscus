@@ -293,6 +293,7 @@ function renderCardWallet(cards, urgent) {
       if (e.target.closest(".wallet-open") || e.target.closest(".wallet-card-mini")) return;
       collapse();
     };
+    syncFaceClasses([openCard]);
     return;
   }
 
@@ -308,6 +309,7 @@ function renderCardWallet(cards, urgent) {
       state.walletOpenId = +el.dataset.id;
       renderCardWallet(cards, urgent);
     }));
+  syncFaceClasses(cards);
 }
 $("#card-view-seg")?.addEventListener("click", (e) => {
   const btn = e.target.closest(".seg-btn");
@@ -348,11 +350,66 @@ async function renderDetail() {
   $("#detail-title").textContent = c.name;
   $("#detail-body").innerHTML = detailHtml(c, urgent);
   bindDetail(c);
+  syncFaceClasses([c]);
+}
+
+/* ---------------------------------------------------------------- 卡面文字亮度自适应（1.2.1-beta.6）
+   用户上传的卡面图亮度不可知：canvas 采样整图平均亮度，亮图 → 文字切深色+白纱遮罩，暗图 → 白字+黑遮罩。
+   无图纯色卡按主题色 WCAG 相对亮度判定。采样结果按图文件名缓存。三处卡面共用：详情/层叠/展开置顶。 */
+const faceLumaCache = new Map();
+
+function hexLuma(hex6) {
+  const v = hex6.replace("#", "").toLowerCase();
+  const r = parseInt(v.slice(0, 2), 16) / 255, g = parseInt(v.slice(2, 4), 16) / 255,
+        b = parseInt(v.slice(4, 6), 16) / 255;
+  const f = (x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+
+function faceIsLight(c) {
+  if (c.image_url) return faceLumaCache.get(c.image_url) === "light";
+  return hexLuma(c.color || "#2d3a5c") > 0.55;
+}
+
+function applyFaceText(c) {
+  const light = faceIsLight(c);
+  document.querySelectorAll(
+    `.detail-face[data-card="${c.id}"], .wallet-card[data-id="${c.id}"], .wallet-open[data-id="${c.id}"]`
+  ).forEach((el) => el.classList.toggle("face-light", light));
+}
+
+function syncFaceClasses(cards) {
+  for (const c of cards) {
+    applyFaceText(c);
+    if (c.image_url && !faceLumaCache.has(c.image_url)) sampleFaceImage(c);
+  }
+}
+
+function sampleFaceImage(c) {
+  const key = c.image_url;
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const cv = document.createElement("canvas");
+      cv.width = 120; cv.height = 76;
+      const ctx = cv.getContext("2d");
+      ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      const d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+      let r = 0, g = 0, b = 0;
+      for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
+      const n = d.length / 4;
+      const hex = [r, g, b].map((v) => Math.round(v / n).toString(16).padStart(2, "0")).join("");
+      faceLumaCache.set(key, hexLuma(hex) > 0.55 ? "light" : "dark");
+    } catch (e) { faceLumaCache.set(key, "dark"); }
+    applyFaceText(c);
+  };
+  img.onerror = () => { faceLumaCache.set(key, "dark"); applyFaceText(c); };
+  img.src = key;
 }
 
 function faceBlock(c) {
   return `
-  <div class="detail-face">
+  <div class="detail-face" data-card="${c.id}">
     <div class="detail-face-inner" style="background-color:${esc(c.color)};${c.image_url ? `background-image:url('${esc(c.image_url)}')` : ""}">
       <div class="wallet-top">
         <div>
@@ -1533,17 +1590,38 @@ $("#btn-logout")?.addEventListener("click", async () => {
 
 /* ---------------------------------------------------------------- Tab 切换（底部栏 + 顶栏 topnav 共用，照 SubDeck data-nav 模式） */
 $$(".tab-item, .topnav .nav-btn").forEach((el) =>
-  el.addEventListener("click", async () => {
-    const tab = el.dataset.tab;
-    state.tab = tab;
-    state.walletOpenId = null;      // 离开卡包即收起展开态
-    $$(".tab-item, .topnav .nav-btn").forEach((b) =>
-      b.classList.toggle("active", b.dataset.tab === tab));
-    ["cards", "todo", "bills", "settings"].forEach((t) =>
-      $(`#tab-${t}`).classList.toggle("hidden", t !== tab));
-    if (tab === "todo") { await refreshOverview(); applyTodoView(); }
-    if (tab === "bills") await renderBills();
-  }));
+  el.addEventListener("click", () => switchTab(el.dataset.tab)));
+
+/* 统一视图切换出口（唯一）：底栏/顶栏/帮助页跳转共用 */
+async function switchTab(tab) {
+  state.tab = tab;
+  state.walletOpenId = null;      // 离开卡包即收起展开态
+  $$(".tab-item, .topnav .nav-btn").forEach((b) =>
+    b.classList.toggle("active", b.dataset.tab === tab || (tab === "smtp-help" && b.dataset.tab === "settings")));
+  ["cards", "todo", "bills", "settings", "smtp-help"].forEach((t) =>
+    $(`#tab-${t}`).classList.toggle("hidden", t !== tab));
+  if (tab === "smtp-help") loadSmtpGuide();   /* 教程内容按需拉取，本次会话只拉一次（照抄 SubDeck） */
+  if (tab === "todo") { await refreshOverview(); applyTodoView(); }
+  if (tab === "bills") await renderBills();
+}
+
+/* SMTP 授权码教程帮助页（照抄 SubDeck loadSmtpGuide） */
+let smtpGuideLoaded = false;
+async function loadSmtpGuide() {
+  const box = $("#smtp-help-content");
+  if (smtpGuideLoaded) return;
+  box.textContent = "加载中…";
+  try {
+    const res = await fetch("/help/smtp", { cache: "no-cache" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    box.innerHTML = await res.text();
+    smtpGuideLoaded = true;
+  } catch (ex) {
+    box.innerHTML = '<p class="muted">教程加载失败，请检查服务是否正常后重试：' + esc(ex.message) + "</p>";
+  }
+}
+$("#link-smtp-guide")?.addEventListener("click", () => switchTab("smtp-help"));
+$("#btn-smtp-back")?.addEventListener("click", () => switchTab("settings"));
 
 /* ---------------------------------------------------------------- 启动 */
 (async function init() {

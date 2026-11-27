@@ -442,6 +442,20 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 :is(.wallet-card, .wallet-open, .detail-face) .badge {
   background: rgba(255, 255, 255, .22); color: #fff; backdrop-filter: blur(4px);
 }
+/* 亮卡面文字自适应（1.2.1-beta.6）：canvas 采样亮图/亮色卡 → 深色文字 + 白纱遮罩 */
+:is(.detail-face, .wallet-card, .wallet-open).face-light { color: #1f2430; }
+.face-light .wallet-bank,
+.face-light .wallet-due,
+.face-light .wallet-sub { color: #1f2430; text-shadow: 0 1px 2px rgba(255, 255, 255, .4); }
+.face-light .wallet-sub { opacity: .72; }
+:is(.detail-face.face-light .detail-face-inner,
+    .face-light .wallet-face)::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .42));
+}
+:is(.wallet-card, .wallet-open, .detail-face).face-light .badge {
+  background: rgba(0, 0, 0, .12); color: #1f2430;
+}
+.face-light .wallet-chip { outline: 1px solid rgba(0, 0, 0, .15); }
 :is(.wallet-card, .wallet-open, .detail-face) .badge-warn {
   background: rgba(245, 131, 35, .85); color: #fff;
 }
@@ -737,8 +751,8 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 .mcal-grid .cell.today .d { color: var(--accent); }
 .mcal-grid .cell.picked { background: var(--accent-weak); outline: 1.5px solid var(--accent); }
 .mcal-legend {
-  display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px;
-  color: var(--text-3); margin: 10px 2px;
+  display: flex; flex-wrap: wrap; gap: 10px; font-size: 11.5px;
+  color: var(--text-2); margin: 8px 4px 2px;   /* 已并入 .mcal 容器内，继承面板底保证背景图下可读 */
 }
 .mcal-legend i { display: inline-flex; align-items: center; gap: 4px; font-style: normal; }
 .mday-title { font-size: 13px; font-weight: 600; margin: 14px 2px 8px; }
@@ -759,6 +773,29 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 }
 .mday-check:hover { border-color: var(--accent); color: var(--accent); }
 .mday-check.done { background: var(--ok); border-color: var(--ok); color: #fff; }
+
+/* ============ SMTP 帮助视图（照抄 SubDeck：panel + doc-content 主题排版） ============ */
+.panel { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--line); padding: 16px; }
+body[data-skin="glassplus"] .panel { backdrop-filter: blur(16px) saturate(1.25); -webkit-backdrop-filter: blur(16px) saturate(1.25); border-color: color-mix(in srgb, var(--line) 55%, transparent); }
+.doc-link {
+  background: none; border: none; padding: 2px 6px; margin: 0;
+  color: var(--accent); font-weight: 600; font-size: inherit; line-height: inherit;
+  cursor: pointer; font-family: inherit;
+}
+.doc-link:hover { text-decoration: underline; }
+.doc-content { margin-top: 14px; color: var(--text); line-height: 1.7; }
+.doc-content h1 { font-size: 20px; margin: 10px 0 12px; color: var(--text); }
+.doc-content h2 { font-size: 17px; margin: 22px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); color: var(--text); }
+.doc-content h3 { font-size: 15px; margin: 16px 0 6px; color: var(--text); }
+.doc-content p { margin: 8px 0; font-size: 13.5px; }
+.doc-content ol, .doc-content ul { margin: 8px 0; padding-left: 22px; }
+.doc-content li { margin: 4px 0; font-size: 13.5px; }
+.doc-content strong { color: var(--text); }
+.doc-content table { display: block; overflow-x: auto; width: 100%; border-collapse: collapse; margin: 10px 0; }
+.doc-content th, .doc-content td { border: 1px solid var(--line); padding: 6px 10px; font-size: 13px; text-align: left; }
+.doc-content th { background: var(--panel-2); font-weight: 600; }
+.doc-content code { background: var(--panel-2); border-radius: 5px; padding: 1px 6px; font-size: 12.5px; }
+.doc-content a { color: var(--accent); }
 
 /* ============ 弹窗 / Toast ============ */
 /* 弹窗体系（照抄 SubDeck）：mask 底部对齐 + modal 底部上弹，桌面媒体查询改居中 */
