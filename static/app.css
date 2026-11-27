@@ -484,10 +484,6 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   background: linear-gradient(135deg, #F3D680, #C9A85C); flex: none; margin-top: 4px;
 }
 .wallet-badge-row { display: flex; gap: 8px; align-items: center; }
-/* 卡面图上的徽章统一加深：层叠卡/展开置顶卡/详情卡面三种容器全覆盖 */
-:is(.wallet-card, .wallet-open, .detail-face) .badge {
-  background: rgba(255, 255, 255, .22); color: #fff; backdrop-filter: blur(4px);
-}
 /* 亮卡面文字自适应（1.2.1-beta.6）：canvas 采样亮图/亮色卡 → 深色文字 + 白纱遮罩 */
 :is(.detail-face, .wallet-card, .wallet-open).face-light { color: #1f2430; }
 .face-light .wallet-bank,
@@ -498,23 +494,16 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
     .face-light .wallet-face)::after {
   background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .42));
 }
-:is(.wallet-card, .wallet-open, .detail-face).face-light .badge {
-  background: rgba(0, 0, 0, .12); color: #1f2430;
+/* 卡面内徽章统一磨砂玻璃胶囊（自由人生卡面同款）：
+   深色半透玻璃底+白字+模糊，不随状态变色、不随卡面亮度反色，全卡一个质感 */
+:is(.wallet-card, .wallet-open, .detail-face) .badge {
+  background: rgba(15, 22, 40, .58);
+  color: #fff; border-color: transparent;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .4);   /* 亮底色卡上白字对比补强 */
+  backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
 }
 .face-light .wallet-chip { outline: 1px solid rgba(0, 0, 0, .15); }
-:is(.wallet-card, .wallet-open, .detail-face) .badge-warn {
-  background: rgba(245, 131, 35, .85); color: #fff;
-}
-:is(.wallet-card, .wallet-open, .detail-face) .badge-danger {
-  background: rgba(216, 67, 21, .85); color: #fff;
-}
-:is(.wallet-card, .wallet-open, .detail-face) .badge-ok {
-  background: rgba(97, 171, 131, .8); color: #fff;
-}
-:is(.wallet-card, .wallet-open, .detail-face) :is(.badge-blue, .badge-deep, .badge-mute) {
-  background: rgba(36, 54, 96, .82); color: #fff; border-color: transparent;
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-}
 .wallet-hint {
   text-align: center; color: var(--text-2); font-size: 12px; padding: 14px 0 4px;
 }
