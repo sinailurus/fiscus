@@ -397,7 +397,8 @@ with sync_playwright() as p:
         pg.wait_for_timeout(400)
         ov3 = pg.evaluate("fetch('/api/overview').then(r => r.json())")
         ccb3 = next((c for c in ov3["cards"] if c["name"] == "建行卡"), None)
-        check("逾期打卡后恢复滚动", ccb3 and ccb3["next_due_days"] > 0,
+        check("逾期打卡后恢复滚动", ccb3 and ccb3["next_due_days"] >= 0
+              and ccb3["next_period"] != ccb2["next_period"],
               f"days={ccb3 and ccb3['next_due_days']} period={ccb3 and ccb3['next_period']}")
     else:
         check("逾期卡打卡后恢复滚动", False, "建行卡未处于逾期态，前置异常")

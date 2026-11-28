@@ -277,12 +277,28 @@ body[data-skin="glassplus"] {
   --panel: color-mix(in srgb, var(--card) 74%, transparent);
   --panel-2: color-mix(in srgb, var(--card) 62%, transparent);
 }
+/* 深色玻璃底按定稿配方换蓝黑基色，次级面板再透一档保持层级 */
+body[data-theme="dark"][data-skin="glassplus"] {
+  --panel: rgba(16, 26, 42, .42);
+  --panel-2: rgba(16, 26, 42, .30);
+}
 body[data-skin="glassplus"] :is(.modal, .card-detail, .login-card, .info-card,
 .quick-actions, .todo-item, .wallet-info-panel, .topbar,
 .mcal, .bill-sum, .bill-row, .bill-hist, .day-item, .h-toggle) {
-  backdrop-filter: blur(16px) saturate(1.25);
-  -webkit-backdrop-filter: blur(16px) saturate(1.25);
+  backdrop-filter: blur(14px) saturate(1.35);
+  -webkit-backdrop-filter: blur(14px) saturate(1.35);
   border-color: color-mix(in srgb, var(--line) 55%, transparent);
+}
+/* 玻璃质感三细节（定稿配方）：顶缘内高光 + 轻拟物投影 + 白字轻投影保对比 */
+body[data-theme="dark"][data-skin="glassplus"] :is(.modal, .card-detail, .login-card, .info-card,
+.quick-actions, .todo-item, .wallet-info-panel,
+.mcal, .bill-sum, .bill-row, .bill-hist, .day-item, .h-toggle) {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .32);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
+}
+/* 顶栏例外：sticky 长条只留顶缘高光，不做整条投影（视觉上与内容层脱节） */
+body[data-theme="dark"][data-skin="glassplus"] .topbar {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .32);
 }
 body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
   background: color-mix(in srgb, var(--card) 88%, transparent);
@@ -820,7 +836,8 @@ body[data-skin="glassplus"] :is(.input, .color-picker, textarea) {
 
 /* ============ SMTP 帮助视图（照抄 SubDeck：panel + doc-content 主题排版） ============ */
 .panel { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--line); padding: 16px; }
-body[data-skin="glassplus"] .panel { backdrop-filter: blur(16px) saturate(1.25); -webkit-backdrop-filter: blur(16px) saturate(1.25); border-color: color-mix(in srgb, var(--line) 55%, transparent); }
+body[data-skin="glassplus"] .panel { backdrop-filter: blur(14px) saturate(1.35); -webkit-backdrop-filter: blur(14px) saturate(1.35); border-color: color-mix(in srgb, var(--line) 55%, transparent); }
+body[data-theme="dark"][data-skin="glassplus"] .panel { box-shadow: 0 10px 28px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .32); text-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
 .doc-link {
   background: none; border: none; padding: 2px 6px; margin: 0;
   color: var(--accent); font-weight: 600; font-size: inherit; line-height: inherit;
